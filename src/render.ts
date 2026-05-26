@@ -222,8 +222,9 @@ export function renderResult(
 
 	const trailLines = formatTrailLines(snapshot.trail, options.expanded, theme, expandHint);
 	if (trailLines.length > 0) {
+		container.addChild(new Spacer(1));
 		container.addChild({
-			render: (width: number): string[] => ["", ...trailLines.flatMap((l) => formatRow(l, width, options.expanded))],
+			render: (width: number): string[] => trailLines.flatMap((l) => formatRow(l, width, options.expanded)),
 			invalidate: () => {},
 		});
 	}
@@ -235,8 +236,9 @@ export function renderResult(
 
 	const terminalStatus = formatTerminalStatus(snapshot, theme);
 	if (terminalStatus) {
+		container.addChild(new Spacer(1));
 		container.addChild({
-			render: (width: number): string[] => ["", ...formatRow(terminalStatus, width, options.expanded)],
+			render: (width: number): string[] => formatRow(terminalStatus, width, options.expanded),
 			invalidate: () => {},
 		});
 	}
@@ -247,6 +249,7 @@ export function renderResult(
 	// Decide footer presence outside the closure: Pi's `Box` reserves spacing
 	// for present children, so an empty `render` still leaves a gap.
 	if (startedAt !== undefined || summary !== "") {
+		container.addChild(new Spacer(1));
 		container.addChild({
 			render: (width: number): string[] => {
 				let footer = summary;
@@ -256,7 +259,7 @@ export function renderResult(
 					const duration = theme.fg("dim", `${verb} ${formatDuration(durationMs)}`);
 					footer = summary ? `${duration}${theme.fg("muted", " • ")}${summary}` : duration;
 				}
-				return ["", ...formatRow(footer, width, options.expanded)];
+				return formatRow(footer, width, options.expanded);
 			},
 			invalidate: () => {},
 		});
