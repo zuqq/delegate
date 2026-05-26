@@ -191,7 +191,8 @@ export function snapshotSubagentState(
 		usage: { ...state.usage },
 		model: state.model,
 		trail: state.trail.slice(),
-		finalText: state.finalText,
+		// Suppress intermediate assistant text.
+		finalText: status === "succeeded" ? state.finalText : "",
 	};
 }
 

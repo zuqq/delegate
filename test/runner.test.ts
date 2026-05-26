@@ -4,6 +4,7 @@ import {
 	finalizeSubagentState,
 	parseEvent,
 	type SubagentState,
+	snapshotSubagentState,
 	updateSubagentState,
 } from "../src/runner.ts";
 import { CALL } from "./fixtures.ts";
@@ -129,5 +130,17 @@ describe("finalize", () => {
 			finalText: "done",
 			trail: [{ name: "bash", args: {} }],
 		});
+	});
+});
+
+describe("snapshotSubagentState", () => {
+	it.each([["running"], ["failed"], ["aborted"]] as const)("scrubs finalText on %s", (status) => {
+		const s = stateWith({ finalText: "in-flight reply" });
+		expect(snapshotSubagentState(CALL, s, status).finalText).toBe("");
+	});
+
+	it("preserves finalText on succeeded", () => {
+		const s = stateWith({ finalText: "the final answer is 42" });
+		expect(snapshotSubagentState(CALL, s, "succeeded").finalText).toBe("the final answer is 42");
 	});
 });

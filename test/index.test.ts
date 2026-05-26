@@ -89,10 +89,4 @@ describe("buildResult", () => {
 			{ type: "text", text: "subagent aborted" },
 		]);
 	});
-
-	it("running returns finalText (in-flight content is unread by the LLM)", () => {
-		expect(buildResult(makeSubagentSnapshot({ status: "running", finalText: "partial" })).content).toEqual([
-			{ type: "text", text: "partial" },
-		]);
-	});
 });

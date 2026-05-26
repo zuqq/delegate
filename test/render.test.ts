@@ -469,14 +469,14 @@ describe("renderResult", () => {
 		`);
 	});
 
-	it("expanded, aborted with finalText", () => {
+	it("expanded, aborted", () => {
 		const snapshot: SubagentSnapshot = {
 			...CALL,
 			status: "aborted",
 			usage: USAGE,
 			model: "test-model",
 			trail,
-			finalText: "partial reply",
+			finalText: "",
 		};
 		expect(
 			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext())),
@@ -487,8 +487,6 @@ describe("renderResult", () => {
 			$ cargo check
 			read /x.ts
 			edit /y.ts
-
-			 partial reply
 
 			Operation aborted
 
