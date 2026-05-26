@@ -215,6 +215,11 @@ export function renderResult(
 		}
 	}
 
+	if (options.expanded && snapshot.task) {
+		container.addChild(new Spacer(1));
+		container.addChild(new Markdown(snapshot.task, 1, 0, getMarkdownTheme()));
+	}
+
 	const trailLines = formatTrailLines(snapshot.trail, options.expanded, theme, expandHint);
 	if (trailLines.length > 0) {
 		container.addChild({

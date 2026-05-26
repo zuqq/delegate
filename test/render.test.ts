@@ -300,6 +300,8 @@ describe("renderResult", () => {
 			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext()), 120),
 		).toMatchInlineSnapshot(`
 			"
+			 do thing
+
 			$ python3 -c "⏎⇥print(1)⏎""
 		`);
 	});
@@ -357,6 +359,8 @@ describe("renderResult", () => {
 			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext()), 80),
 		).toMatchInlineSnapshot(`
 			"
+			 do thing
+
 			$
 			xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 			xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -377,6 +381,8 @@ describe("renderResult", () => {
 			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext())),
 		).toMatchInlineSnapshot(`
 			"
+			 do thing
+
 			$ cargo check
 			read /x.ts
 			edit /y.ts
@@ -402,9 +408,30 @@ describe("renderResult", () => {
 			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext())),
 		).toMatchInlineSnapshot(`
 			"
+			 do thing
+
 			$ cargo check
 			read /x.ts
 			edit /y.ts
+
+			test-model, 200 context tokens, $0.02"
+		`);
+	});
+
+	it("expanded, running with prompt but no trail yet", () => {
+		const snapshot: SubagentSnapshot = {
+			...CALL,
+			status: "running",
+			usage: USAGE,
+			model: "test-model",
+			trail: [],
+			finalText: "",
+		};
+		expect(
+			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext())),
+		).toMatchInlineSnapshot(`
+			"
+			 do thing
 
 			test-model, 200 context tokens, $0.02"
 		`);
@@ -425,6 +452,8 @@ describe("renderResult", () => {
 			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext())),
 		).toMatchInlineSnapshot(`
 			"
+			 do thing
+
 			$ c0
 			$ c1
 			$ c2
@@ -453,6 +482,8 @@ describe("renderResult", () => {
 			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext())),
 		).toMatchInlineSnapshot(`
 			"
+			 do thing
+
 			$ cargo check
 			read /x.ts
 			edit /y.ts
@@ -460,6 +491,34 @@ describe("renderResult", () => {
 			 partial reply
 
 			Operation aborted
+
+			test-model, 200 context tokens, $0.02"
+		`);
+	});
+
+	it("expanded, multi-line markdown task", () => {
+		const snapshot: SubagentSnapshot = {
+			...CALL,
+			task: "# Task\n\nDo the thing",
+			status: "succeeded",
+			usage: USAGE,
+			model: "test-model",
+			trail,
+			finalText: "done",
+		};
+		expect(
+			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext())),
+		).toMatchInlineSnapshot(`
+			"
+			 Task
+
+			 Do the thing
+
+			$ cargo check
+			read /x.ts
+			edit /y.ts
+
+			 done
 
 			test-model, 200 context tokens, $0.02"
 		`);
@@ -500,6 +559,8 @@ describe("renderResult", () => {
 			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext()), 120),
 		).toMatchInlineSnapshot(`
 			"
+			 do thing
+
 			$ ls -la
 			$ ...
 			read /x.ts
