@@ -188,6 +188,10 @@ export function renderCall(args: Partial<Params>, theme: Theme, context: Minimal
 	};
 }
 
+function renderMarkdown(text: string): Markdown {
+	return new Markdown(text, 1, 0, getMarkdownTheme());
+}
+
 /** The body of the subagent tool, beneath the header. */
 export function renderResult(
 	result: AgentToolResult<SubagentSnapshot>,
@@ -217,7 +221,7 @@ export function renderResult(
 
 	if (options.expanded && snapshot.task) {
 		container.addChild(new Spacer(1));
-		container.addChild(new Markdown(snapshot.task, 1, 0, getMarkdownTheme()));
+		container.addChild(renderMarkdown(snapshot.task));
 	}
 
 	const trailLines = formatTrailLines(snapshot.trail, options.expanded, theme, expandHint);
@@ -231,7 +235,7 @@ export function renderResult(
 
 	if (options.expanded && snapshot.finalText) {
 		container.addChild(new Spacer(1));
-		container.addChild(new Markdown(snapshot.finalText, 1, 0, getMarkdownTheme()));
+		container.addChild(renderMarkdown(snapshot.finalText));
 	}
 
 	const terminalStatus = formatTerminalStatus(snapshot, theme);
