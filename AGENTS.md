@@ -1,10 +1,12 @@
 # `delegate`
 
 `delegate` is a [Pi](https://github.com/earendil-works/pi-coding-agent) extension that adds support for subagents with isolated context windows.
+
 Architecturally, `delegate` borrows heavily from Pi's [`subagent` extension example](https://github.com/earendil-works/pi/tree/main/packages/coding-agent/examples/extensions/subagent).
+`delegate` accepts the same agent `.md` format as the upstream extension.
+
 The crucial difference between these two extensions is that `delegate` leaves coordination (sequencing, branching, fan-out) to the agent, whereas the upstream extension exposes `chain` and `parallel` primitives.
 This works because the agent can sequence tool calls across turns, and Pi executes tool calls from a single assistant message in parallel.
-`delegate` accepts the same agent `.md` format as the upstream extension.
 
 ## Installation
 
