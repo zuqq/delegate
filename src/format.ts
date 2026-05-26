@@ -37,3 +37,17 @@ export function formatCost(cost: number): string {
 	if (three !== "0.000") return `$${three}`;
 	return `$${cost.toFixed(4)}`;
 }
+
+/**
+ * Format a duration in milliseconds as seconds with one decimal.
+ *
+ * @example
+ * formatDuration(0);      // "0.0s"
+ * formatDuration(450);    // "0.5s"
+ * formatDuration(1_234);  // "1.2s"
+ * formatDuration(60_000); // "60.0s"
+ */
+export function formatDuration(ms: number): string {
+	const tenths = Math.round(ms / 100);
+	return `${(tenths / 10).toFixed(1)}s`;
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatCost, formatTokenCount } from "../src/format/usage.ts";
+import { formatCost, formatDuration, formatTokenCount } from "../src/format.ts";
 
 describe("formatCost", () => {
 	it.each([
@@ -37,5 +37,26 @@ describe("formatTokenCount", () => {
 		[99_999_999, "100M"],
 	] as const)("formatTokenCount(%i) === %s", (input, expected) => {
 		expect(formatTokenCount(input)).toBe(expected);
+	});
+});
+
+describe("formatDuration", () => {
+	it.each([
+		[0, "0.0s"],
+		[49, "0.0s"],
+		[50, "0.1s"],
+		[51, "0.1s"],
+		[999, "1.0s"],
+		[1_000, "1.0s"],
+		[4_000, "4.0s"],
+		[4_049, "4.0s"],
+		[4_050, "4.1s"],
+		[4_051, "4.1s"],
+		[4_500, "4.5s"],
+		[10_000, "10.0s"],
+		[60_000, "60.0s"],
+		[-500, "-0.5s"],
+	] as const)("formatDuration(%i) === %s", (input, expected) => {
+		expect(formatDuration(input)).toBe(expected);
 	});
 });
