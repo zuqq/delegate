@@ -2,7 +2,16 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { getAgentDir, parseFrontmatter } from "@earendil-works/pi-coding-agent";
 
-export type AgentSource = "user" | "project";
+export type AgentSource = "user" | "project" | "builtin";
+
+const BUILTIN_AGENTS: AgentConfig[] = [
+	{
+		name: "general-purpose",
+		description: "A general-purpose subagent that can perform any task.",
+		systemPrompt: "",
+		source: "builtin",
+	},
+];
 
 export interface AgentConfig {
 	name: string;
@@ -11,7 +20,7 @@ export interface AgentConfig {
 	model?: string;
 	systemPrompt: string;
 	source: AgentSource;
-	filePath: string;
+	filePath?: string;
 }
 
 export interface SkippedAgent {
@@ -106,6 +115,10 @@ export function loadAgents(cwd: string): AgentCatalog {
 		if (!merged.has(a.name)) merged.set(a.name, a);
 	}
 	skipped.push(...user.skipped);
+
+	for (const a of BUILTIN_AGENTS) {
+		if (!merged.has(a.name)) merged.set(a.name, a);
+	}
 
 	return { loaded: Array.from(merged.values()), skipped };
 }

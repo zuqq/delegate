@@ -119,8 +119,7 @@ ${body}
 		fs.mkdirSync(cwd, { recursive: true });
 
 		const { loaded } = loadAgents(cwd);
-		expect(loaded).toHaveLength(1);
-		expect(loaded[0]).toMatchObject({ name: "a", source: "user" });
+		expect(loaded).toContainEqual(expect.objectContaining({ name: "a", source: "user" }));
 	});
 
 	it("loads user and project agents", () => {
@@ -131,7 +130,6 @@ ${body}
 		const byName = new Map(loaded.map((agent) => [agent.name, agent]));
 		expect(byName.get("a")?.source).toBe("user");
 		expect(byName.get("b")?.source).toBe("project");
-		expect(loaded).toHaveLength(2);
 	});
 
 	it("prefers project agents to user agents", () => {
@@ -139,8 +137,9 @@ ${body}
 		writeAgent(path.join(projectRoot(), ".pi", "agents"), "dup", "project-version", "body p");
 
 		const { loaded } = loadAgents(projectRoot());
-		expect(loaded).toHaveLength(1);
-		expect(loaded[0]).toMatchObject({
+		const dups = loaded.filter((a) => a.name === "dup");
+		expect(dups).toHaveLength(1);
+		expect(dups[0]).toMatchObject({
 			name: "dup",
 			source: "project",
 			description: "project-version",
@@ -154,8 +153,9 @@ ${body}
 		fs.mkdirSync(cwd, { recursive: true });
 
 		const { loaded } = loadAgents(cwd);
-		expect(loaded).toHaveLength(1);
-		expect(loaded[0]).toMatchObject({ name: "dup", source: "project", description: "near" });
+		const dups = loaded.filter((a) => a.name === "dup");
+		expect(dups).toHaveLength(1);
+		expect(dups[0]).toMatchObject({ name: "dup", source: "project", description: "near" });
 	});
 
 	it("collects skipped files from user and project dirs", () => {
@@ -178,10 +178,37 @@ body
 		);
 
 		const { loaded, skipped } = loadAgents(projectRoot());
-		expect(loaded).toEqual([]);
+		expect(loaded.filter((a) => a.source !== "builtin")).toEqual([]);
 		expect(skipped).toEqual([
 			{ filePath: path.join(projectRoot(), ".pi", "agents", "p.md"), reason: "missing description in frontmatter" },
 			{ filePath: path.join(userHome(), "agents", "u.md"), reason: "missing name in frontmatter" },
 		]);
+	});
+
+	it("always includes the built-in general-purpose agent", () => {
+		const cwd = path.join(projectRoot(), "x", "y");
+		fs.mkdirSync(cwd, { recursive: true });
+
+		const { loaded } = loadAgents(cwd);
+		const builtin = loaded.find((a) => a.name === "general-purpose");
+		expect(builtin).toMatchObject({ name: "general-purpose", source: "builtin", systemPrompt: "" });
+	});
+
+	it("prefers user-defined agents to built-ins", () => {
+		writeAgent(path.join(userHome(), "agents"), "general-purpose", "user override", "body");
+
+		const { loaded } = loadAgents(projectRoot());
+		const matches = loaded.filter((a) => a.name === "general-purpose");
+		expect(matches).toHaveLength(1);
+		expect(matches[0]).toMatchObject({ source: "user", description: "user override" });
+	});
+
+	it("prefers project-defined agents to built-ins", () => {
+		writeAgent(path.join(projectRoot(), ".pi", "agents"), "general-purpose", "project override", "body");
+
+		const { loaded } = loadAgents(projectRoot());
+		const matches = loaded.filter((a) => a.name === "general-purpose");
+		expect(matches).toHaveLength(1);
+		expect(matches[0]).toMatchObject({ source: "project", description: "project override" });
 	});
 });
