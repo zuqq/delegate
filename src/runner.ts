@@ -3,14 +3,40 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { createInterface } from "node:readline";
-import {
-	type AgentConfig,
-	emptyUsage,
-	type SubagentCall,
-	type SubagentSnapshot,
-	type ToolCallTrailEntry,
-	type UsageStats,
-} from "./types.ts";
+import type { AgentConfig, AgentSource } from "./agents.ts";
+
+export interface UsageStats {
+	contextTokens: number;
+	cost: number;
+}
+
+export function emptyUsage(): UsageStats {
+	return { contextTokens: 0, cost: 0 };
+}
+
+export interface ToolCallTrailEntry {
+	name: string;
+	args: Record<string, unknown>;
+}
+
+export interface SubagentCall {
+	agent: string;
+	source?: AgentSource;
+	description: string;
+	task: string;
+}
+
+export interface SubagentSnapshot extends SubagentCall {
+	status: "running" | "succeeded" | "failed" | "aborted";
+	/** Set on "failed" only. */
+	errorMessage?: string;
+
+	usage: UsageStats;
+	model: string;
+
+	trail: ToolCallTrailEntry[];
+	finalText: string;
+}
 
 export async function runSubagent(
 	agent: AgentConfig,

@@ -1,7 +1,28 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { getAgentDir, parseFrontmatter } from "@earendil-works/pi-coding-agent";
-import type { AgentCatalog, AgentConfig, AgentSource, SkippedAgent } from "./types.ts";
+
+export type AgentSource = "user" | "project";
+
+export interface AgentConfig {
+	name: string;
+	description: string;
+	tools?: string[];
+	model?: string;
+	systemPrompt: string;
+	source: AgentSource;
+	filePath: string;
+}
+
+export interface SkippedAgent {
+	filePath: string;
+	reason: string;
+}
+
+export interface AgentCatalog {
+	loaded: AgentConfig[];
+	skipped: SkippedAgent[];
+}
 
 function isMissingPathError(err: unknown): boolean {
 	if (!(err instanceof Error) || !("code" in err)) return false;

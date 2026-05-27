@@ -3,7 +3,7 @@ import type { AgentToolResult, ToolRenderResultOptions } from "@earendil-works/p
 import type { Component, Container } from "@earendil-works/pi-tui";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderCall, renderResult, type SubagentRenderState } from "../src/render.ts";
-import { emptyUsage, type SubagentSnapshot } from "../src/types.ts";
+import { emptyUsage, type SubagentSnapshot } from "../src/runner.ts";
 import { CALL, plain, USAGE } from "./fixtures.ts";
 
 const collapsed: ToolRenderResultOptions = { expanded: false, isPartial: false };

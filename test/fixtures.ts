@@ -2,8 +2,9 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach } from "vitest";
+import type { AgentConfig } from "../src/agents.ts";
 import type { MinimalTheme } from "../src/render.ts";
-import { type AgentConfig, emptyUsage, type SubagentSnapshot, type UsageStats } from "../src/types.ts";
+import { emptyUsage, type SubagentSnapshot, type UsageStats } from "../src/runner.ts";
 
 /** No-op theme: returns text unchanged. */
 export const plain: MinimalTheme = { fg: (_c, t) => t, bold: (t) => t };
