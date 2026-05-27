@@ -1,13 +1,8 @@
 import { type AgentToolResult, type ExtensionAPI, keyHint } from "@earendil-works/pi-coding-agent";
 import { type AgentConfig, loadAgents } from "./agents.ts";
+import { emptySubagentState, type SubagentCall, type SubagentSnapshot, snapshotSubagentState } from "./events.ts";
 import { renderCall, renderResult, type SubagentRenderState } from "./render.ts";
-import {
-	emptySubagentState,
-	runSubagent,
-	type SubagentCall,
-	type SubagentSnapshot,
-	snapshotSubagentState,
-} from "./runner.ts";
+import { runSubagent } from "./runner.ts";
 import { type Params, ParamsSchema } from "./schema.ts";
 
 export function buildDescription(agents: AgentConfig[]): string {

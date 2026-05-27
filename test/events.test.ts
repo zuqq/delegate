@@ -6,7 +6,7 @@ import {
 	type SubagentState,
 	snapshotSubagentState,
 	updateSubagentState,
-} from "../src/runner.ts";
+} from "../src/events.ts";
 import { CALL } from "./fixtures.ts";
 
 describe("parseEvent", () => {

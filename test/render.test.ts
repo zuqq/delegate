@@ -2,8 +2,8 @@ import * as os from "node:os";
 import type { AgentToolResult, ToolRenderResultOptions } from "@earendil-works/pi-coding-agent";
 import type { Component, Container } from "@earendil-works/pi-tui";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { emptyUsage, type SubagentSnapshot } from "../src/events.ts";
 import { renderCall, renderResult, type SubagentRenderState } from "../src/render.ts";
-import { emptyUsage, type SubagentSnapshot } from "../src/runner.ts";
 import { CALL, plain, USAGE } from "./fixtures.ts";
 
 const collapsed: ToolRenderResultOptions = { expanded: false, isPartial: false };

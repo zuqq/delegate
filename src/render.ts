@@ -8,8 +8,8 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { type Component, Container, Markdown, Spacer, truncateToWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import type { AgentSource } from "./agents.ts";
+import type { SubagentSnapshot, ToolCallTrailEntry, UsageStats } from "./events.ts";
 import { formatCost, formatDuration, formatTokenCount } from "./format.ts";
-import type { SubagentSnapshot, ToolCallTrailEntry, UsageStats } from "./runner.ts";
 import type { Params } from "./schema.ts";
 
 /** The subset of Pi's `Theme` we depend on, to simplify testing. */
