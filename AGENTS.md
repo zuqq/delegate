@@ -8,6 +8,8 @@ Architecturally, `delegate` borrows heavily from Pi's [`subagent` extension exam
 The crucial difference between these two extensions is that `delegate` leaves coordination (sequencing, branching, fan-out) to the agent, whereas the upstream extension exposes `chain` and `parallel` primitives.
 This works because the agent can sequence tool calls across turns, and Pi executes tool calls from a single assistant message in parallel.
 
+<img src="demo.gif" alt="delegate demo">
+
 ## Installation
 
 ```bash
