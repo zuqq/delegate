@@ -2,7 +2,7 @@ import { type AgentToolResult, type ExtensionAPI, keyHint } from "@earendil-work
 import { type AgentConfig, loadAgents } from "./agents.ts";
 import { emptySubagentState, type SubagentCall, type SubagentSnapshot, snapshotSubagentState } from "./events.ts";
 import { renderCall, renderResult, type SubagentRenderState } from "./render.ts";
-import { runSubagent } from "./runner.ts";
+import { runSubagent } from "./run.ts";
 import { type Params, ParamsSchema } from "./schema.ts";
 
 export function buildDescription(agents: AgentConfig[]): string {
