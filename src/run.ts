@@ -21,7 +21,7 @@ export async function runSubagent(
 	signal: AbortSignal | undefined,
 	onUpdate: (snapshot: SubagentSnapshot) => void,
 ): Promise<SubagentSnapshot> {
-	const cleanups: (() => void)[] = [];
+	const cleanups: (() => Promise<void>)[] = [];
 
 	try {
 		const cliArgs: string[] = ["--mode", "json", "-p", "--no-session"];
@@ -47,7 +47,7 @@ export async function runSubagent(
 	} finally {
 		for (const fn of cleanups) {
 			try {
-				fn();
+				await fn();
 			} catch {
 				// best effort
 			}
@@ -132,15 +132,6 @@ async function writePromptToTmpFile(prompt: string): Promise<string> {
 	return filePath;
 }
 
-function removeTmpFile(filePath: string): void {
-	try {
-		fs.unlinkSync(filePath);
-	} catch {
-		// best effort
-	}
-	try {
-		fs.rmdirSync(path.dirname(filePath));
-	} catch {
-		// best effort
-	}
+async function removeTmpFile(filePath: string): Promise<void> {
+	await fs.promises.rm(path.dirname(filePath), { recursive: true, force: true });
 }
