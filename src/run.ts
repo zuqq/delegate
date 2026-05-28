@@ -37,7 +37,11 @@ export async function runSubagent(
 		}
 		cliArgs.push(call.task);
 
-		const proc = spawn("pi", cliArgs, {
+		// Bun's `--compile` standalone sets `argv[1]` to a `/$bunfs/root/...`
+		// virtual path; spawn `execPath` directly in that case.
+		const script = process.argv[1];
+		const piArgs = !script || script.startsWith("/$bunfs/root/") ? cliArgs : [script, ...cliArgs];
+		const proc = spawn(process.execPath, piArgs, {
 			cwd,
 			shell: false,
 			stdio: ["ignore", "pipe", "pipe"],
