@@ -222,8 +222,7 @@ function flatten(s: string): string {
 }
 
 function formatRow(text: string, width: number, expanded: boolean): string[] {
-	text = flatten(text);
-	return expanded ? wrapTextWithAnsi(text, width) : [truncateToWidth(text, width, "...")];
+	return expanded ? wrapTextWithAnsi(text, width) : [truncateToWidth(flatten(text), width, "...")];
 }
 
 /** The header for the subagent tool. */

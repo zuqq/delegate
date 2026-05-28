@@ -309,7 +309,9 @@ describe("renderResult", () => {
 			"
 			 do thing
 
-			$ python3 -c "⏎⇥print(1)⏎""
+			$ python3 -c "
+				print(1)
+			""
 		`);
 	});
 
@@ -329,6 +331,49 @@ describe("renderResult", () => {
 		).toMatchInlineSnapshot(`
 			"
 			Pi exited with code 1: eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee..."
+		`);
+	});
+
+	const errorMessageWithStackTrace =
+		"Error [ERR_MODULE_NOT_FOUND]: Cannot find module\n\tat finalizeResolution\n\tat moduleResolve";
+
+	it("collapsed, failed status with newlines and tabs", () => {
+		const snapshot: SubagentSnapshot = {
+			...CALL,
+			status: "failed",
+			errorMessage: errorMessageWithStackTrace,
+			usage: emptyUsage(),
+			model: "",
+			trail: [],
+			finalText: "",
+		};
+		expect(
+			renderContainer(renderResult(makeResult(snapshot), collapsed, theme, makeContext()), 120),
+		).toMatchInlineSnapshot(`
+			"
+			Error [ERR_MODULE_NOT_FOUND]: Cannot find module⏎⇥at finalizeResolution⏎⇥at moduleResolve"
+		`);
+	});
+
+	it("expanded, failed status with newlines and tabs", () => {
+		const snapshot: SubagentSnapshot = {
+			...CALL,
+			status: "failed",
+			errorMessage: errorMessageWithStackTrace,
+			usage: emptyUsage(),
+			model: "",
+			trail: [],
+			finalText: "",
+		};
+		expect(
+			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext()), 120),
+		).toMatchInlineSnapshot(`
+			"
+			 do thing
+
+			Error [ERR_MODULE_NOT_FOUND]: Cannot find module
+				at finalizeResolution
+				at moduleResolve"
 		`);
 	});
 
