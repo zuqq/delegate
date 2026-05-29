@@ -1,4 +1,4 @@
-import { type AgentToolResult, type ExtensionAPI, keyHint } from "@earendil-works/pi-coding-agent";
+import { type AgentToolResult, type ExtensionAPI, getAgentDir, keyHint } from "@earendil-works/pi-coding-agent";
 import { type AgentConfig, loadAgents } from "./agents.ts";
 import { emptySubagentState, type SubagentCall, type SubagentSnapshot, snapshotSubagentState } from "./events.ts";
 import { renderCall, renderResult, type SubagentRenderState } from "./render.ts";
@@ -45,7 +45,7 @@ function buildUnknownAgentResult(params: Params, agents: AgentConfig[]): AgentTo
 }
 
 export default function (pi: ExtensionAPI): void {
-	const { loaded: catalog, skipped } = loadAgents(process.cwd());
+	const { loaded: catalog, skipped } = loadAgents(process.cwd(), getAgentDir());
 
 	if (skipped.length > 0) {
 		pi.on("session_start", (_event, ctx) => {

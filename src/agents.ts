@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getAgentDir, parseFrontmatter } from "@earendil-works/pi-coding-agent";
+import { parseFrontmatter } from "@earendil-works/pi-coding-agent";
 
 export type AgentSource = "user" | "project" | "builtin";
 
@@ -92,33 +92,38 @@ export function loadAgentsFromDir(dir: string, source: AgentSource): AgentCatalo
 	return { loaded, skipped };
 }
 
-/** Load project (`cwd` and all ancestors) and user agent configs. */
-export function loadAgents(cwd: string): AgentCatalog {
+function collectProjectDirs(startDir: string): string[] {
+	const ancestors: string[] = [];
+	let cur = startDir;
+	while (true) {
+		ancestors.push(cur);
+		// Stop at the repository root.
+		if (fs.existsSync(path.join(cur, ".git"))) return ancestors;
+		const parent = path.dirname(cur);
+		// No repository found: keep only `startDir`.
+		if (parent === cur) return [startDir];
+		cur = parent;
+	}
+}
+
+/** Load project (`cwd` up to the repository root) and user agent configs. */
+export function loadAgents(cwd: string, agentDir: string): AgentCatalog {
 	const merged = new Map<string, AgentConfig>();
 	const skipped: SkippedAgent[] = [];
 
-	let cur = path.resolve(cwd);
-	while (true) {
-		const project = loadAgentsFromDir(path.join(cur, ".pi", "agents"), "project");
-		for (const a of project.loaded) {
-			// Definitions closer to `cwd` take precedence.
+	function mergeCatalog(catalog: AgentCatalog) {
+		for (const a of catalog.loaded) {
 			if (!merged.has(a.name)) merged.set(a.name, a);
 		}
-		skipped.push(...project.skipped);
-		const parent = path.dirname(cur);
-		if (parent === cur) break;
-		cur = parent;
+		skipped.push(...catalog.skipped);
 	}
 
-	const user = loadAgentsFromDir(path.join(getAgentDir(), "agents"), "user");
-	for (const a of user.loaded) {
-		if (!merged.has(a.name)) merged.set(a.name, a);
+	// The first definition of a name wins, so merge nearest-first.
+	for (const dir of collectProjectDirs(cwd)) {
+		mergeCatalog(loadAgentsFromDir(path.join(dir, ".pi", "agents"), "project"));
 	}
-	skipped.push(...user.skipped);
-
-	for (const a of BUILTIN_AGENTS) {
-		if (!merged.has(a.name)) merged.set(a.name, a);
-	}
+	mergeCatalog(loadAgentsFromDir(path.join(agentDir, "agents"), "user"));
+	mergeCatalog({ loaded: BUILTIN_AGENTS, skipped: [] });
 
 	return { loaded: Array.from(merged.values()), skipped };
 }
