@@ -77,10 +77,10 @@ function formatAgent(agent: string | undefined, source: AgentSource | undefined)
 }
 
 function formatHeader(description: string | undefined, agent: string | undefined, theme: MinimalTheme): string {
-	const placeholder = theme.fg("toolOutput", "...");
-	const display = description ? theme.fg("accent", description) : placeholder;
-	const agentDisplay = agent || "...";
-	return `${theme.fg("toolTitle", theme.bold("subagent"))} ${display}${theme.fg("muted", ` (${agentDisplay})`)}`;
+	const toolDisplay = theme.fg("toolTitle", theme.bold("subagent"));
+	const descriptionDisplay = theme.fg("accent", description || "...");
+	const agentDisplay = theme.fg("muted", agent || "...");
+	return `${toolDisplay} ${descriptionDisplay} (${agentDisplay})`;
 }
 
 function tildify(p: string): string {
