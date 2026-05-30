@@ -187,13 +187,11 @@ function formatTerminalStatus(snapshot: SubagentSnapshot, theme: MinimalTheme): 
 function formatSummary(usage: UsageStats, model: string | undefined, theme: MinimalTheme): string {
 	const parts: string[] = [];
 	if (model) parts.push(model);
-	// `contextTokens` is a snapshot
-	if (usage.contextTokens > 0) {
+	if (usage.contextTokens) {
 		parts.push(`${formatTokenCount(usage.contextTokens)} context token${usage.contextTokens === 1 ? "" : "s"}`);
 	}
 	if (usage.cost) parts.push(formatCost(usage.cost));
-	if (parts.length === 0) return "";
-	return theme.fg("dim", parts.join(", "));
+	return parts.length > 0 ? theme.fg("dim", parts.join(", ")) : "";
 }
 
 /** The per-frame state persisted by Pi between `renderCall` and `renderResult`. */
