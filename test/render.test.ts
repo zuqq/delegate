@@ -307,6 +307,7 @@ describe("renderResult", () => {
 			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext()), 120),
 		).toMatchInlineSnapshot(`
 			"
+			Prompt:
 			 do thing
 
 			$ python3 -c "
@@ -369,6 +370,7 @@ describe("renderResult", () => {
 			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext()), 120),
 		).toMatchInlineSnapshot(`
 			"
+			Prompt:
 			 do thing
 
 			Error [ERR_MODULE_NOT_FOUND]: Cannot find module
@@ -411,6 +413,7 @@ describe("renderResult", () => {
 			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext()), 80),
 		).toMatchInlineSnapshot(`
 			"
+			Prompt:
 			 do thing
 
 			$
@@ -433,12 +436,14 @@ describe("renderResult", () => {
 			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext())),
 		).toMatchInlineSnapshot(`
 			"
+			Prompt:
 			 do thing
 
 			$ cargo check
 			read /x.ts
 			edit /y.ts
 
+			Response:
 			 Hello
 
 			 the final answer is 42
@@ -460,6 +465,7 @@ describe("renderResult", () => {
 			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext())),
 		).toMatchInlineSnapshot(`
 			"
+			Prompt:
 			 do thing
 
 			$ cargo check
@@ -483,6 +489,7 @@ describe("renderResult", () => {
 			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext())),
 		).toMatchInlineSnapshot(`
 			"
+			Prompt:
 			 do thing
 
 			test-model, 200 context tokens, $0.02"
@@ -504,6 +511,7 @@ describe("renderResult", () => {
 			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext())),
 		).toMatchInlineSnapshot(`
 			"
+			Prompt:
 			 do thing
 
 			$ c0
@@ -534,6 +542,7 @@ describe("renderResult", () => {
 			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext())),
 		).toMatchInlineSnapshot(`
 			"
+			Prompt:
 			 do thing
 
 			$ cargo check
@@ -560,6 +569,7 @@ describe("renderResult", () => {
 			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext())),
 		).toMatchInlineSnapshot(`
 			"
+			Prompt:
 			 Task
 
 			 Do the thing
@@ -568,6 +578,7 @@ describe("renderResult", () => {
 			read /x.ts
 			edit /y.ts
 
+			Response:
 			 done
 
 			test-model, 200 context tokens, $0.02"
@@ -609,6 +620,7 @@ describe("renderResult", () => {
 			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext()), 120),
 		).toMatchInlineSnapshot(`
 			"
+			Prompt:
 			 do thing
 
 			$ ls -la

@@ -243,6 +243,14 @@ function renderMarkdown(text: string): Markdown {
 	return new Markdown(text, 1, 0, getMarkdownTheme());
 }
 
+function renderLabel(label: string, theme: MinimalTheme): Component {
+	const text = theme.fg("muted", label);
+	return {
+		render: (width: number): string[] => formatRow(text, width, true),
+		invalidate: () => {},
+	};
+}
+
 /** The body of the subagent tool, beneath the header. */
 export function renderResult(
 	result: AgentToolResult<SubagentSnapshot>,
@@ -272,6 +280,7 @@ export function renderResult(
 
 	if (options.expanded && snapshot.task) {
 		container.addChild(new Spacer(1));
+		container.addChild(renderLabel("Prompt:", theme));
 		container.addChild(renderMarkdown(snapshot.task));
 	}
 
@@ -286,6 +295,7 @@ export function renderResult(
 
 	if (options.expanded && snapshot.finalText) {
 		container.addChild(new Spacer(1));
+		container.addChild(renderLabel("Response:", theme));
 		container.addChild(renderMarkdown(snapshot.finalText));
 	}
 
