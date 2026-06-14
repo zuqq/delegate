@@ -23,12 +23,12 @@ export interface AgentConfig {
 	filePath?: string;
 }
 
-export interface SkippedAgent {
+interface SkippedAgent {
 	filePath: string;
 	reason: string;
 }
 
-export interface AgentCatalog {
+interface AgentCatalog {
 	loaded: AgentConfig[];
 	skipped: SkippedAgent[];
 }
