@@ -1,6 +1,6 @@
 import { type AgentToolResult, type ExtensionAPI, getAgentDir, keyHint } from "@earendil-works/pi-coding-agent";
 import { type AgentConfig, loadAgents } from "./agents.ts";
-import { emptySubagentState, type SubagentCall, type SubagentSnapshot, snapshotSubagentState } from "./events.ts";
+import { emptySubagentState, type SubagentSnapshot, snapshotSubagentState } from "./events.ts";
 import { renderCall, renderResult, type SubagentRenderState } from "./render.ts";
 import { runSubagent } from "./run.ts";
 import { type Params, ParamsSchema } from "./schema.ts";
@@ -37,8 +37,7 @@ export function buildResult(snapshot: SubagentSnapshot): AgentToolResult<Subagen
 
 function buildUnknownAgentResult(params: Params, agents: AgentConfig[]): AgentToolResult<SubagentSnapshot> {
 	const errorMessage = `Unknown agent: ${params.agent}\n\nAvailable agents:\n\n${buildAvailableAgents(agents)}`;
-	const call: SubagentCall = { agent: params.agent, description: params.description, task: params.task };
-	const snapshot = snapshotSubagentState(call, emptySubagentState(), "failed", errorMessage);
+	const snapshot = snapshotSubagentState(params, emptySubagentState(), "failed", errorMessage);
 	return buildResult(snapshot);
 }
 
