@@ -38,7 +38,7 @@ describe("tool_result hook", () => {
 		["running", undefined],
 	] as const)("status %s → %j", (status, expected) => {
 		const handler = getToolResultHandler();
-		expect(handler({ toolName: "subagent", details: makeSubagentSnapshot({ status }) })).toEqual(expected);
+		expect(handler({ toolName: "subagent", details: { status } })).toEqual(expected);
 	});
 
 	it("ignores other tools' results", () => {
@@ -56,7 +56,7 @@ describe("tool_result hook", () => {
 
 describe("buildResult", () => {
 	it("returns the snapshot as details and a single text block", () => {
-		const snapshot = makeSubagentSnapshot();
+		const snapshot = makeSubagentSnapshot({ status: "succeeded" });
 		const result = buildResult(snapshot);
 		expect(result.details).toBe(snapshot);
 		expect(result.content).toHaveLength(1);

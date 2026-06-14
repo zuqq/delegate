@@ -1,14 +1,5 @@
 import type { AgentSource } from "./agents.ts";
 
-export interface UsageStats {
-	contextTokens: number;
-	cost: number;
-}
-
-export function emptyUsage(): UsageStats {
-	return { contextTokens: 0, cost: 0 };
-}
-
 export interface ToolCallTrailEntry {
 	name: string;
 	args: Record<string, unknown>;
@@ -21,31 +12,33 @@ export interface SubagentCall {
 	task: string;
 }
 
-export interface SubagentSnapshot extends SubagentCall {
-	status: "running" | "succeeded" | "failed" | "aborted";
-	/** Set on "failed" only. */
-	errorMessage?: string;
-
-	usage: UsageStats;
-	model: string;
-
+interface SubagentTrace {
 	trail: ToolCallTrailEntry[];
-	finalText: string;
+	contextTokens: number;
+	cost: number;
+	model?: string;
 }
 
+export type SubagentStatus =
+	| { status: "running" }
+	| { status: "succeeded"; finalText?: string }
+	| { status: "failed"; errorMessage?: string }
+	| { status: "aborted" };
+
+export type SubagentSnapshot = SubagentCall & SubagentTrace & SubagentStatus;
+
 export interface SubagentState {
-	usage: UsageStats;
-	model: string;
-
 	trail: ToolCallTrailEntry[];
-	finalText: string;
-
+	contextTokens: number;
+	cost: number;
+	model?: string;
 	stopReason?: string;
 	errorMessage?: string;
+	finalText?: string;
 }
 
 export function emptySubagentState(): SubagentState {
-	return { usage: emptyUsage(), model: "", trail: [], finalText: "" };
+	return { trail: [], contextTokens: 0, cost: 0 };
 }
 
 interface ToolExecutionStartEvent {
@@ -64,7 +57,7 @@ interface MessageEndEvent {
 	finalText?: string;
 }
 
-export type PiEvent = ToolExecutionStartEvent | MessageEndEvent;
+type Event = ToolExecutionStartEvent | MessageEndEvent;
 
 interface RawEvent {
 	type?: string;
@@ -79,15 +72,15 @@ interface RawMessage {
 	model?: string;
 	stopReason?: string;
 	errorMessage?: string;
-	content?: RawContentPart[];
+	content?: RawContent[];
 }
 
-interface RawContentPart {
+interface RawContent {
 	type?: string;
 	text?: string;
 }
 
-export function parseEvent(line: string): PiEvent | undefined {
+export function parseEvent(line: string): Event | undefined {
 	let raw: RawEvent | null;
 	try {
 		raw = JSON.parse(line);
@@ -131,7 +124,7 @@ function parseMessageEnd(raw: RawEvent): MessageEndEvent | undefined {
 	return event;
 }
 
-function extractAssistantMessageText(content: RawContentPart[]): string | undefined {
+function extractAssistantMessageText(content: RawContent[]): string | undefined {
 	let text = "";
 	for (const part of content) {
 		if (part.type === "text" && typeof part.text === "string") {
@@ -141,17 +134,17 @@ function extractAssistantMessageText(content: RawContentPart[]): string | undefi
 	return text.trim() || undefined;
 }
 
-export function updateSubagentState(state: SubagentState, event: PiEvent): void {
+export function updateSubagentState(state: SubagentState, event: Event): void {
 	switch (event.type) {
 		case "tool_execution_start":
 			state.trail.push({ name: event.toolName, args: event.args });
 			return;
 		case "message_end":
 			// snapshot, not a running sum
-			if (event.contextTokens !== undefined) state.usage.contextTokens = event.contextTokens;
-			if (event.cost !== undefined) state.usage.cost += event.cost;
+			if (event.contextTokens !== undefined) state.contextTokens = event.contextTokens;
+			if (event.cost !== undefined) state.cost += event.cost;
 			if (event.model) state.model = event.model;
-			if (event.finalText !== undefined) state.finalText = event.finalText;
+			if (event.finalText) state.finalText = event.finalText;
 			if (event.stopReason) state.stopReason = event.stopReason;
 			if (event.errorMessage) state.errorMessage = event.errorMessage;
 			return;
@@ -166,13 +159,14 @@ export function snapshotSubagentState(
 ): SubagentSnapshot {
 	return {
 		...call,
-		status,
-		errorMessage,
-		usage: { ...state.usage },
-		model: state.model,
 		trail: state.trail.slice(),
+		contextTokens: state.contextTokens,
+		cost: state.cost,
+		model: state.model,
+		status,
 		// Suppress intermediate assistant text.
-		finalText: status === "succeeded" ? state.finalText : "",
+		finalText: status === "succeeded" ? state.finalText : undefined,
+		errorMessage,
 	};
 }
 

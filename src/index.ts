@@ -22,8 +22,10 @@ export function buildResult(snapshot: SubagentSnapshot): AgentToolResult<Subagen
 	let text: string;
 	switch (snapshot.status) {
 		case "running":
+			text = "";
+			break;
 		case "succeeded":
-			text = snapshot.finalText;
+			text = snapshot.finalText || "";
 			break;
 		case "failed":
 			text = snapshot.errorMessage ?? "subagent failed";

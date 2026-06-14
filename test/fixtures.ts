@@ -3,7 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { test } from "vitest";
 import type { AgentConfig } from "../src/agents.ts";
-import { emptyUsage, type SubagentSnapshot, type UsageStats } from "../src/events.ts";
+import type { SubagentSnapshot, SubagentStatus } from "../src/events.ts";
 import type { MinimalTheme } from "../src/render.ts";
 
 /** No-op theme: returns text unchanged. */
@@ -11,22 +11,14 @@ export const plain: MinimalTheme = { fg: (_c, t) => t, bold: (t) => t };
 
 export const CALL = { agent: "scout", source: "user" as const, description: "lbl", task: "do thing" };
 
-export const USAGE: UsageStats = { contextTokens: 200, cost: 0.02 };
+export const USAGE = { contextTokens: 200, cost: 0.02 };
 
 export function makeAgentConfig(name: string, description = ""): AgentConfig {
 	return { name, description, systemPrompt: "", source: "user", filePath: `/x/${name}.md` };
 }
 
-export function makeSubagentSnapshot(overrides: Partial<SubagentSnapshot> = {}): SubagentSnapshot {
-	return {
-		...CALL,
-		status: "succeeded",
-		usage: emptyUsage(),
-		model: "m",
-		trail: [],
-		finalText: "",
-		...overrides,
-	};
+export function makeSubagentSnapshot(status: SubagentStatus): SubagentSnapshot {
+	return { ...CALL, contextTokens: 0, cost: 0, model: "m", trail: [], ...status };
 }
 
 interface AgentDirs {

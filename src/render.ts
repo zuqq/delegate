@@ -8,7 +8,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { type Component, Container, Markdown, Spacer, truncateToWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import type { AgentSource } from "./agents.ts";
-import type { SubagentSnapshot, ToolCallTrailEntry, UsageStats } from "./events.ts";
+import type { SubagentSnapshot, ToolCallTrailEntry } from "./events.ts";
 import type { Params } from "./schema.ts";
 
 function stripZeroFraction(s: string): string {
@@ -184,14 +184,13 @@ function formatTerminalStatus(snapshot: SubagentSnapshot, theme: MinimalTheme): 
 }
 
 /** The resource summary at the end of the footer. */
-function formatSummary(usage: UsageStats, model: string | undefined, theme: MinimalTheme): string {
+function formatSummary(contextTokens: number, cost: number, model: string | undefined, theme: MinimalTheme): string {
+	if (!model) return "";
 	const parts: string[] = [];
-	if (model) parts.push(model);
-	if (usage.contextTokens) {
-		parts.push(`${formatTokenCount(usage.contextTokens)} context token${usage.contextTokens === 1 ? "" : "s"}`);
-	}
-	if (usage.cost) parts.push(formatCost(usage.cost));
-	return parts.length > 0 ? theme.fg("dim", parts.join(", ")) : "";
+	parts.push(model);
+	parts.push(`${formatTokenCount(contextTokens)} context token${contextTokens === 1 ? "" : "s"}`);
+	parts.push(formatCost(cost));
+	return theme.fg("dim", parts.join(", "));
 }
 
 /** The per-frame state persisted by Pi between `renderCall` and `renderResult`. */
@@ -293,7 +292,7 @@ export function renderResult(
 		});
 	}
 
-	if (options.expanded && snapshot.finalText) {
+	if (options.expanded && snapshot.status === "succeeded" && snapshot.finalText) {
 		container.addChild(new Spacer(1));
 		container.addChild(renderLabel("Response:", theme));
 		container.addChild(renderMarkdown(snapshot.finalText));
@@ -310,7 +309,7 @@ export function renderResult(
 
 	const startedAt = state.startedAt;
 	const endedAt = state.endedAt;
-	const summary = formatSummary(snapshot.usage, snapshot.model || undefined, theme);
+	const summary = formatSummary(snapshot.contextTokens, snapshot.cost, snapshot.model, theme);
 	// Decide footer presence outside the closure: Pi's `Box` reserves spacing
 	// for present children, so an empty `render` still leaves a gap.
 	if (startedAt !== undefined || summary !== "") {

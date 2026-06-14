@@ -57,7 +57,7 @@ describe("step", () => {
 		const s = emptySubagentState();
 		updateSubagentState(s, { type: "message_end", contextTokens: 100, cost: 0.01 });
 		updateSubagentState(s, { type: "message_end", contextTokens: 200, cost: 0.02 });
-		expect(s.usage).toEqual({ contextTokens: 200, cost: 0.03 });
+		expect(s).toMatchObject({ contextTokens: 200, cost: 0.03 });
 	});
 
 	it("records model, stopReason, errorMessage, finalText from message_end", () => {
@@ -82,50 +82,46 @@ describe("finalize", () => {
 	it("returns succeeded on clean exit", () => {
 		const d = finalizeSubagentState(CALL, stateWith(), { type: "exit", code: 0, stderr: "" });
 		expect(d.status).toBe("succeeded");
-		expect(d.errorMessage).toBeUndefined();
 	});
 
 	it("returns failed when the exit code is non-zero, with a generic message", () => {
 		const d = finalizeSubagentState(CALL, stateWith(), { type: "exit", code: 7, stderr: "" });
-		expect(d.status).toBe("failed");
-		expect(d.errorMessage).toContain("Pi exited with code 7");
+		expect(d).toMatchObject({ status: "failed", errorMessage: expect.stringContaining("Pi exited with code 7") });
 	});
 
 	it("returns failed when stopReason is 'error', preferring the recorded errorMessage", () => {
 		const s = stateWith({ stopReason: "error", errorMessage: "provider 500" });
 		const d = finalizeSubagentState(CALL, s, { type: "exit", code: 0, stderr: "ignored" });
-		expect(d.status).toBe("failed");
-		expect(d.errorMessage).toBe("provider 500");
+		expect(d).toMatchObject({ status: "failed", errorMessage: "provider 500" });
 	});
 
 	it("falls back to stderr when no errorMessage was recorded", () => {
 		const d = finalizeSubagentState(CALL, stateWith(), { type: "exit", code: 2, stderr: "bad config\n" });
-		expect(d.status).toBe("failed");
-		expect(d.errorMessage).toBe("bad config");
+		expect(d).toMatchObject({ status: "failed", errorMessage: "bad config" });
 	});
 
 	it("returns aborted regardless of exit details", () => {
 		const d = finalizeSubagentState(CALL, stateWith({ stopReason: "error" }), { type: "aborted" });
 		expect(d.status).toBe("aborted");
-		expect(d.errorMessage).toBeUndefined();
 	});
 
 	it("returns failed with the spawn error message", () => {
 		const d = finalizeSubagentState(CALL, stateWith(), { type: "spawnError", message: "ENOENT: pi" });
-		expect(d.status).toBe("failed");
-		expect(d.errorMessage).toBe("ENOENT: pi");
+		expect(d).toMatchObject({ status: "failed", errorMessage: "ENOENT: pi" });
 	});
 
 	it("copies state fields into the SubagentSnapshot", () => {
 		const s = stateWith({
-			usage: { contextTokens: 42, cost: 0.5 },
+			contextTokens: 42,
+			cost: 0.5,
 			model: "m",
 			finalText: "done",
 			trail: [{ name: "bash", args: {} }],
 		});
 		const d = finalizeSubagentState(CALL, s, { type: "exit", code: 0, stderr: "" });
 		expect(d).toMatchObject({
-			usage: { contextTokens: 42, cost: 0.5 },
+			contextTokens: 42,
+			cost: 0.5,
 			model: "m",
 			finalText: "done",
 			trail: [{ name: "bash", args: {} }],
@@ -134,13 +130,8 @@ describe("finalize", () => {
 });
 
 describe("snapshotSubagentState", () => {
-	it.each([["running"], ["failed"], ["aborted"]] as const)("scrubs finalText on %s", (status) => {
-		const s = stateWith({ finalText: "in-flight reply" });
-		expect(snapshotSubagentState(CALL, s, status).finalText).toBe("");
-	});
-
 	it("preserves finalText on succeeded", () => {
 		const s = stateWith({ finalText: "the final answer is 42" });
-		expect(snapshotSubagentState(CALL, s, "succeeded").finalText).toBe("the final answer is 42");
+		expect(snapshotSubagentState(CALL, s, "succeeded")).toMatchObject({ finalText: "the final answer is 42" });
 	});
 });

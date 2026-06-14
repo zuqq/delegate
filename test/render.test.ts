@@ -1,8 +1,9 @@
 import * as os from "node:os";
-import type { AgentToolResult, ToolRenderResultOptions } from "@earendil-works/pi-coding-agent";
+import type { ToolRenderResultOptions } from "@earendil-works/pi-coding-agent";
 import type { Component, Container } from "@earendil-works/pi-tui";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { emptyUsage, type SubagentSnapshot } from "../src/events.ts";
+import type { SubagentSnapshot } from "../src/events.ts";
+import { buildResult } from "../src/index.ts";
 import {
 	formatCost,
 	formatDuration,
@@ -30,10 +31,6 @@ function makeContext(
 		isError: flags.isError ?? false,
 		expanded: flags.expanded ?? false,
 	};
-}
-
-function makeResult(snapshot: SubagentSnapshot): AgentToolResult<SubagentSnapshot> {
-	return { content: [{ type: "text", text: snapshot.finalText }], details: snapshot };
 }
 
 // `truncateToWidth` emits a bare reset around its ellipsis even under `plain`.
@@ -101,13 +98,13 @@ describe("renderResult", () => {
 		const snapshot: SubagentSnapshot = {
 			...CALL,
 			status: "running",
-			usage: emptyUsage(),
+			contextTokens: 0,
+			cost: 0,
 			model: "",
 			trail: [],
-			finalText: "",
 		};
 		expect(
-			renderContainer(renderResult(makeResult(snapshot), collapsed, theme, makeContext())),
+			renderContainer(renderResult(buildResult(snapshot), collapsed, theme, makeContext())),
 		).toMatchInlineSnapshot(`""`);
 	});
 
@@ -115,13 +112,12 @@ describe("renderResult", () => {
 		const snapshot: SubagentSnapshot = {
 			...CALL,
 			status: "running",
-			usage: USAGE,
+			...USAGE,
 			model: "test-model",
 			trail: [],
-			finalText: "",
 		};
 		expect(
-			renderContainer(renderResult(makeResult(snapshot), collapsed, theme, makeContext())),
+			renderContainer(renderResult(buildResult(snapshot), collapsed, theme, makeContext())),
 		).toMatchInlineSnapshot(`
 			"
 			test-model, 200 context tokens, $0.02"
@@ -132,13 +128,13 @@ describe("renderResult", () => {
 		const snapshot: SubagentSnapshot = {
 			...CALL,
 			status: "succeeded",
-			usage: USAGE,
+			...USAGE,
 			model: "test-model",
 			trail,
 			finalText: "the final answer is 42",
 		};
 		expect(
-			renderContainer(renderResult(makeResult(snapshot), collapsed, theme, makeContext())),
+			renderContainer(renderResult(buildResult(snapshot), collapsed, theme, makeContext())),
 		).toMatchInlineSnapshot(`
 			"
 			$ cargo check
@@ -153,13 +149,12 @@ describe("renderResult", () => {
 		const snapshot: SubagentSnapshot = {
 			...CALL,
 			status: "aborted",
-			usage: USAGE,
+			...USAGE,
 			model: "test-model",
 			trail: trail.slice(0, 2),
-			finalText: "",
 		};
 		expect(
-			renderContainer(renderResult(makeResult(snapshot), collapsed, theme, makeContext())),
+			renderContainer(renderResult(buildResult(snapshot), collapsed, theme, makeContext())),
 		).toMatchInlineSnapshot(`
 			"
 			$ cargo check
@@ -176,13 +171,12 @@ describe("renderResult", () => {
 			...CALL,
 			status: "failed",
 			errorMessage: "Pi exited with code 1",
-			usage: USAGE,
+			...USAGE,
 			model: "test-model",
 			trail: trail.slice(0, 2),
-			finalText: "",
 		};
 		expect(
-			renderContainer(renderResult(makeResult(snapshot), collapsed, theme, makeContext())),
+			renderContainer(renderResult(buildResult(snapshot), collapsed, theme, makeContext())),
 		).toMatchInlineSnapshot(`
 			"
 			$ cargo check
@@ -204,13 +198,12 @@ describe("renderResult", () => {
 		const snapshot: SubagentSnapshot = {
 			...CALL,
 			status: "running",
-			usage: USAGE,
+			...USAGE,
 			model: "test-model",
 			trail: many,
-			finalText: "",
 		};
 		expect(
-			renderContainer(renderResult(makeResult(snapshot), collapsed, theme, makeContext())),
+			renderContainer(renderResult(buildResult(snapshot), collapsed, theme, makeContext())),
 		).toMatchInlineSnapshot(`
 			"
 			... (2 earlier tool calls)
@@ -232,13 +225,12 @@ describe("renderResult", () => {
 		const snapshot: SubagentSnapshot = {
 			...CALL,
 			status: "running",
-			usage: USAGE,
+			...USAGE,
 			model: "test-model",
 			trail: many,
-			finalText: "",
 		};
 		expect(
-			renderContainer(renderResult(makeResult(snapshot), collapsed, theme, makeContext())),
+			renderContainer(renderResult(buildResult(snapshot), collapsed, theme, makeContext())),
 		).toMatchInlineSnapshot(`
 			"
 			... (1 earlier tool call)
@@ -256,17 +248,17 @@ describe("renderResult", () => {
 		const snapshot: SubagentSnapshot = {
 			...CALL,
 			status: "running",
-			usage: emptyUsage(),
+			contextTokens: 0,
+			cost: 0,
 			model: "",
 			trail: [
 				{ name: "bash", args: { command: long("a") } },
 				{ name: "bash", args: { command: long("b") } },
 				{ name: "bash", args: { command: long("c") } },
 			],
-			finalText: "",
 		};
 		expect(
-			renderContainer(renderResult(makeResult(snapshot), collapsed, theme, makeContext()), 80),
+			renderContainer(renderResult(buildResult(snapshot), collapsed, theme, makeContext()), 80),
 		).toMatchInlineSnapshot(`
 			"
 			$ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa...
@@ -280,13 +272,13 @@ describe("renderResult", () => {
 		const snapshot: SubagentSnapshot = {
 			...CALL,
 			status: "running",
-			usage: emptyUsage(),
+			contextTokens: 0,
+			cost: 0,
 			model: "",
 			trail: [{ name: "bash", args: { command: cmd } }],
-			finalText: "",
 		};
 		expect(
-			renderContainer(renderResult(makeResult(snapshot), collapsed, theme, makeContext()), 120),
+			renderContainer(renderResult(buildResult(snapshot), collapsed, theme, makeContext()), 120),
 		).toMatchInlineSnapshot(`
 			"
 			$ cd /a && python3 -c "⏎⇥data = open('x').read()⏎""
@@ -298,13 +290,13 @@ describe("renderResult", () => {
 		const snapshot: SubagentSnapshot = {
 			...CALL,
 			status: "running",
-			usage: emptyUsage(),
+			contextTokens: 0,
+			cost: 0,
 			model: "",
 			trail: [{ name: "bash", args: { command: cmd } }],
-			finalText: "",
 		};
 		expect(
-			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext()), 120),
+			renderContainer(renderResult(buildResult(snapshot), expanded, theme, makeContext()), 120),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -322,13 +314,13 @@ describe("renderResult", () => {
 			...CALL,
 			status: "failed",
 			errorMessage: longErr,
-			usage: emptyUsage(),
+			contextTokens: 0,
+			cost: 0,
 			model: "",
 			trail: [],
-			finalText: "",
 		};
 		expect(
-			renderContainer(renderResult(makeResult(snapshot), collapsed, theme, makeContext()), 80),
+			renderContainer(renderResult(buildResult(snapshot), collapsed, theme, makeContext()), 80),
 		).toMatchInlineSnapshot(`
 			"
 			Pi exited with code 1: eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee..."
@@ -343,13 +335,13 @@ describe("renderResult", () => {
 			...CALL,
 			status: "failed",
 			errorMessage: errorMessageWithStackTrace,
-			usage: emptyUsage(),
+			contextTokens: 0,
+			cost: 0,
 			model: "",
 			trail: [],
-			finalText: "",
 		};
 		expect(
-			renderContainer(renderResult(makeResult(snapshot), collapsed, theme, makeContext()), 120),
+			renderContainer(renderResult(buildResult(snapshot), collapsed, theme, makeContext()), 120),
 		).toMatchInlineSnapshot(`
 			"
 			Error [ERR_MODULE_NOT_FOUND]: Cannot find module⏎⇥at finalizeResolution⏎⇥at moduleResolve"
@@ -361,13 +353,13 @@ describe("renderResult", () => {
 			...CALL,
 			status: "failed",
 			errorMessage: errorMessageWithStackTrace,
-			usage: emptyUsage(),
+			contextTokens: 0,
+			cost: 0,
 			model: "",
 			trail: [],
-			finalText: "",
 		};
 		expect(
-			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext()), 120),
+			renderContainer(renderResult(buildResult(snapshot), expanded, theme, makeContext()), 120),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -383,14 +375,14 @@ describe("renderResult", () => {
 		const snapshot: SubagentSnapshot = {
 			...CALL,
 			status: "succeeded",
-			usage: { contextTokens: 99_999, cost: 0.99 },
+			contextTokens: 99_999,
+			cost: 0.99,
 			model: "a-very-long-provider/model-name",
 			trail: [],
-			finalText: "",
 		};
 		expect(
 			renderContainer(
-				renderResult(makeResult(snapshot), collapsed, theme, makeContext({ startedAt: 0, endedAt: 10_000 })),
+				renderResult(buildResult(snapshot), collapsed, theme, makeContext({ startedAt: 0, endedAt: 10_000 })),
 				40,
 			),
 		).toMatchInlineSnapshot(`
@@ -404,13 +396,13 @@ describe("renderResult", () => {
 		const snapshot: SubagentSnapshot = {
 			...CALL,
 			status: "running",
-			usage: emptyUsage(),
+			contextTokens: 0,
+			cost: 0,
 			model: "",
 			trail: [{ name: "bash", args: { command: long } }],
-			finalText: "",
 		};
 		expect(
-			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext()), 80),
+			renderContainer(renderResult(buildResult(snapshot), expanded, theme, makeContext()), 80),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -427,13 +419,13 @@ describe("renderResult", () => {
 		const snapshot: SubagentSnapshot = {
 			...CALL,
 			status: "succeeded",
-			usage: USAGE,
+			...USAGE,
 			model: "test-model",
 			trail,
 			finalText: "# Hello\n\nthe final answer is 42",
 		};
 		expect(
-			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext())),
+			renderContainer(renderResult(buildResult(snapshot), expanded, theme, makeContext())),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -456,13 +448,12 @@ describe("renderResult", () => {
 		const snapshot: SubagentSnapshot = {
 			...CALL,
 			status: "succeeded",
-			usage: USAGE,
+			...USAGE,
 			model: "test-model",
 			trail,
-			finalText: "",
 		};
 		expect(
-			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext())),
+			renderContainer(renderResult(buildResult(snapshot), expanded, theme, makeContext())),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -480,13 +471,12 @@ describe("renderResult", () => {
 		const snapshot: SubagentSnapshot = {
 			...CALL,
 			status: "running",
-			usage: USAGE,
+			...USAGE,
 			model: "test-model",
 			trail: [],
-			finalText: "",
 		};
 		expect(
-			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext())),
+			renderContainer(renderResult(buildResult(snapshot), expanded, theme, makeContext())),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -502,13 +492,12 @@ describe("renderResult", () => {
 		const snapshot: SubagentSnapshot = {
 			...CALL,
 			status: "succeeded",
-			usage: USAGE,
+			...USAGE,
 			model: "test-model",
 			trail: many,
-			finalText: "",
 		};
 		expect(
-			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext())),
+			renderContainer(renderResult(buildResult(snapshot), expanded, theme, makeContext())),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -533,13 +522,12 @@ describe("renderResult", () => {
 		const snapshot: SubagentSnapshot = {
 			...CALL,
 			status: "aborted",
-			usage: USAGE,
+			...USAGE,
 			model: "test-model",
 			trail,
-			finalText: "",
 		};
 		expect(
-			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext())),
+			renderContainer(renderResult(buildResult(snapshot), expanded, theme, makeContext())),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -560,13 +548,13 @@ describe("renderResult", () => {
 			...CALL,
 			task: "# Task\n\nDo the thing",
 			status: "succeeded",
-			usage: USAGE,
+			...USAGE,
 			model: "test-model",
 			trail,
 			finalText: "done",
 		};
 		expect(
-			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext())),
+			renderContainer(renderResult(buildResult(snapshot), expanded, theme, makeContext())),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -611,13 +599,13 @@ describe("renderResult", () => {
 		const snapshot: SubagentSnapshot = {
 			...CALL,
 			status: "succeeded",
-			usage: emptyUsage(),
+			contextTokens: 0,
+			cost: 0,
 			model: "",
 			trail: variants,
-			finalText: "",
 		};
 		expect(
-			renderContainer(renderResult(makeResult(snapshot), expanded, theme, makeContext()), 120),
+			renderContainer(renderResult(buildResult(snapshot), expanded, theme, makeContext()), 120),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -654,14 +642,13 @@ describe("renderResult: duration footer", () => {
 		const snapshot: SubagentSnapshot = {
 			...CALL,
 			status: "running",
-			usage: USAGE,
+			...USAGE,
 			model: "test-model",
 			trail,
-			finalText: "",
 		};
 		expect(
 			renderContainer(
-				renderResult(makeResult(snapshot), collapsedPartial, theme, makeContext({ startedAt: 6_000 })),
+				renderResult(buildResult(snapshot), collapsedPartial, theme, makeContext({ startedAt: 6_000 })),
 			),
 		).toMatchInlineSnapshot(`
 			"
@@ -675,14 +662,13 @@ describe("renderResult: duration footer", () => {
 		const snapshot: SubagentSnapshot = {
 			...CALL,
 			status: "succeeded",
-			usage: USAGE,
+			...USAGE,
 			model: "test-model",
 			trail,
-			finalText: "",
 		};
 		expect(
 			renderContainer(
-				renderResult(makeResult(snapshot), collapsed, theme, makeContext({ startedAt: 1_000, endedAt: 11_000 })),
+				renderResult(buildResult(snapshot), collapsed, theme, makeContext({ startedAt: 1_000, endedAt: 11_000 })),
 			),
 		).toMatchInlineSnapshot(`
 			"
@@ -697,14 +683,13 @@ describe("renderResult: duration footer", () => {
 			...CALL,
 			status: "failed",
 			errorMessage: "Pi exited with code 1",
-			usage: USAGE,
+			...USAGE,
 			model: "test-model",
 			trail,
-			finalText: "",
 		};
 		expect(
 			renderContainer(
-				renderResult(makeResult(snapshot), collapsed, theme, makeContext({ startedAt: 0, endedAt: 10_000 })),
+				renderResult(buildResult(snapshot), collapsed, theme, makeContext({ startedAt: 0, endedAt: 10_000 })),
 			),
 		).toMatchInlineSnapshot(`
 			"
@@ -720,13 +705,12 @@ describe("renderResult: duration footer", () => {
 		const snapshot: SubagentSnapshot = {
 			...CALL,
 			status: "running",
-			usage: USAGE,
+			...USAGE,
 			model: "test-model",
 			trail,
-			finalText: "",
 		};
 		expect(
-			renderContainer(renderResult(makeResult(snapshot), collapsedPartial, theme, makeContext({}))),
+			renderContainer(renderResult(buildResult(snapshot), collapsedPartial, theme, makeContext({}))),
 		).toMatchInlineSnapshot(`
 			"
 			$ cargo check
@@ -739,14 +723,14 @@ describe("renderResult: duration footer", () => {
 		const snapshot: SubagentSnapshot = {
 			...CALL,
 			status: "running",
-			usage: emptyUsage(),
+			contextTokens: 0,
+			cost: 0,
 			model: "",
 			trail: [],
-			finalText: "",
 		};
 		expect(
 			renderContainer(
-				renderResult(makeResult(snapshot), collapsedPartial, theme, makeContext({ startedAt: 9_000 })),
+				renderResult(buildResult(snapshot), collapsedPartial, theme, makeContext({ startedAt: 9_000 })),
 			),
 		).toMatchInlineSnapshot(`
 			"
