@@ -5,12 +5,17 @@ import { renderCall, renderResult, type SubagentRenderState } from "./render.ts"
 import { runSubagent } from "./run.ts";
 import { type Params, ParamsSchema } from "./schema.ts";
 
+function buildAvailableAgents(agents: AgentConfig[]): string {
+	return agents
+		.map((a) => `- ${a.name}: ${a.description}`)
+		.sort()
+		.join("\n");
+}
+
 export function buildDescription(agents: AgentConfig[]): string {
 	const preamble =
 		"Run one task in a specialized subagent with an isolated context window. Each agent has its own system prompt, model, and tools. For coordination (sequencing, branching, fan-out), emit multiple subagent calls; sibling tool calls run in parallel by default.";
-	if (agents.length === 0) return preamble;
-	const bullets = agents.map((a) => `- ${a.name}: ${a.description}`).join("\n");
-	return `${preamble}\n\nAvailable agents:\n\n${bullets}`;
+	return `${preamble}\n\nAvailable agents:\n\n${buildAvailableAgents(agents)}`;
 }
 
 export function buildResult(snapshot: SubagentSnapshot): AgentToolResult<SubagentSnapshot> {
@@ -31,14 +36,7 @@ export function buildResult(snapshot: SubagentSnapshot): AgentToolResult<Subagen
 }
 
 function buildUnknownAgentResult(params: Params, agents: AgentConfig[]): AgentToolResult<SubagentSnapshot> {
-	const available =
-		agents.length > 0
-			? agents
-					.map((a) => a.name)
-					.sort()
-					.join(", ")
-			: "(none)";
-	const errorMessage = `unknown agent "${params.agent}"; available: ${available}`;
+	const errorMessage = `Unknown agent: ${params.agent}\n\nAvailable agents:\n\n${buildAvailableAgents(agents)}`;
 	const call: SubagentCall = { agent: params.agent, description: params.description, task: params.task };
 	const snapshot = snapshotSubagentState(call, emptySubagentState(), "failed", errorMessage);
 	return buildResult(snapshot);

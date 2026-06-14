@@ -19,12 +19,6 @@ function getToolResultHandler(): (event: unknown) => unknown {
 }
 
 describe("buildDescription", () => {
-	it("returns the preamble alone when no agents are discovered", () => {
-		const description = buildDescription([]);
-		expect(description).toContain("Run one task in a specialized subagent");
-		expect(description).not.toContain("Available agents:");
-	});
-
 	it("appends available agents to the description", () => {
 		const description = buildDescription([
 			makeAgentConfig("scout", "investigate the codebase"),
