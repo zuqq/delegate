@@ -1,22 +1,7 @@
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { describe, expect, it, vi } from "vitest";
-import register, { buildDescription, buildResult } from "../src/index.ts";
+import type { ToolResultEvent } from "@earendil-works/pi-coding-agent";
+import { describe, expect, it } from "vitest";
+import { buildDescription, buildResult, handleToolResult } from "../src/index.ts";
 import { makeAgentConfig, makeSubagentSnapshot } from "./fixtures.ts";
-
-/** Register the extension against a stub API and return the captured `tool_result` handler. */
-function getToolResultHandler(): (event: unknown) => unknown {
-	const handlers = new Map<string, (event: unknown) => unknown>();
-	const api = {
-		registerTool: vi.fn(),
-		on: vi.fn((event: string, handler: (event: unknown) => unknown) => {
-			handlers.set(event, handler);
-		}),
-	} as unknown as ExtensionAPI;
-	register(api);
-	const handler = handlers.get("tool_result");
-	if (!handler) throw new Error("tool_result handler not registered");
-	return handler;
-}
 
 describe("buildDescription", () => {
 	it("appends available agents to the description", () => {
@@ -30,27 +15,24 @@ describe("buildDescription", () => {
 	});
 });
 
-describe("tool_result hook", () => {
+describe("handleToolResult", () => {
 	it.each([
 		["aborted", { isError: true }],
 		["failed", { isError: true }],
 		["succeeded", undefined],
 		["running", undefined],
 	] as const)("status %s → %j", (status, expected) => {
-		const handler = getToolResultHandler();
-		expect(handler({ toolName: "subagent", details: { status } })).toEqual(expected);
+		expect(handleToolResult({ toolName: "subagent", details: { status } } as ToolResultEvent)).toEqual(expected);
 	});
 
 	it("ignores other tools' results", () => {
-		const handler = getToolResultHandler();
-		expect(handler({ toolName: "bash", details: { status: "failed" } })).toBeUndefined();
+		expect(handleToolResult({ toolName: "bash", details: { status: "failed" } } as ToolResultEvent)).toBeUndefined();
 	});
 
 	// Pi can clobber `details` on a thrown error.
 	it("tolerates missing/empty details", () => {
-		const handler = getToolResultHandler();
-		expect(handler({ toolName: "subagent", details: undefined })).toBeUndefined();
-		expect(handler({ toolName: "subagent", details: {} })).toBeUndefined();
+		expect(handleToolResult({ toolName: "subagent", details: undefined } as ToolResultEvent)).toBeUndefined();
+		expect(handleToolResult({ toolName: "subagent", details: {} } as ToolResultEvent)).toBeUndefined();
 	});
 });
 

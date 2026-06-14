@@ -1,4 +1,10 @@
-import { type AgentToolResult, type ExtensionAPI, getAgentDir, keyHint } from "@earendil-works/pi-coding-agent";
+import {
+	type AgentToolResult,
+	type ExtensionAPI,
+	getAgentDir,
+	keyHint,
+	type ToolResultEvent,
+} from "@earendil-works/pi-coding-agent";
 import { type AgentConfig, loadAgents } from "./agents.ts";
 import { emptySubagentState, type SubagentSnapshot, snapshotSubagentState } from "./events.ts";
 import { renderCall, renderResult, type SubagentRenderState } from "./render.ts";
@@ -37,6 +43,16 @@ export function buildResult(snapshot: SubagentSnapshot): AgentToolResult<Subagen
 	return { content: [{ type: "text", text }], details: snapshot };
 }
 
+// Override `isError` via hook because throwing clobbers `details` and
+// `execute`'s return can't set it.
+export function handleToolResult(event: ToolResultEvent): { isError: true } | undefined {
+	if (event.toolName !== "subagent") return;
+	const snapshot = event.details as SubagentSnapshot | undefined;
+	if (snapshot?.status === "failed" || snapshot?.status === "aborted") {
+		return { isError: true };
+	}
+}
+
 function buildUnknownAgentResult(params: Params, agents: AgentConfig[]): AgentToolResult<SubagentSnapshot> {
 	const errorMessage = `Unknown agent: ${params.agent}\n\nAvailable agents:\n\n${buildAvailableAgents(agents)}`;
 	const snapshot = snapshotSubagentState(params, emptySubagentState(), "failed", errorMessage);
@@ -54,15 +70,7 @@ export default function (pi: ExtensionAPI): void {
 		});
 	}
 
-	// Override `isError` via hook because throwing clobbers `details` and
-	// `execute`'s return can't set it.
-	pi.on("tool_result", (event) => {
-		if (event.toolName !== "subagent") return;
-		const snapshot = event.details as SubagentSnapshot | undefined;
-		if (snapshot?.status === "failed" || snapshot?.status === "aborted") {
-			return { isError: true };
-		}
-	});
+	pi.on("tool_result", handleToolResult);
 
 	pi.registerTool<typeof ParamsSchema, SubagentSnapshot, SubagentRenderState>({
 		name: "subagent",
