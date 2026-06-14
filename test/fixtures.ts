@@ -9,11 +9,16 @@ import type { MinimalTheme } from "../src/render.ts";
 /** No-op theme: returns text unchanged. */
 export const plain: MinimalTheme = { fg: (_c, t) => t, bold: (t) => t };
 
-export const CALL = { agent: "scout", source: "user" as const, description: "lbl", task: "do thing" };
+export const CALL = {
+	agent: "scout",
+	source: "user" as const,
+	description: "the thing",
+	task: "do the thing",
+};
 
 export const USAGE = { contextTokens: 200, cost: 0.02 };
 
-export function makeAgentConfig(name: string, description = ""): AgentConfig {
+export function makeAgentConfig(name: string, description: string): AgentConfig {
 	return { name, description, systemPrompt: "", source: "user", filePath: `/x/${name}.md` };
 }
 
