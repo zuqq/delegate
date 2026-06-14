@@ -159,7 +159,8 @@ export function snapshotSubagentState(
 ): SubagentSnapshot {
 	return {
 		...call,
-		trail: state.trail.slice(),
+		// Alias the append-only `state.trail`.
+		trail: state.trail,
 		contextTokens: state.contextTokens,
 		cost: state.cost,
 		model: state.model,
