@@ -18,6 +18,7 @@ import { CALL, plain, USAGE } from "./fixtures.ts";
 const collapsed: ToolRenderResultOptions = { expanded: false, isPartial: false };
 const expanded: ToolRenderResultOptions = { expanded: true, isPartial: false };
 const collapsedPartial: ToolRenderResultOptions = { expanded: false, isPartial: true };
+const expandedPartial: ToolRenderResultOptions = { expanded: true, isPartial: true };
 
 function makeContext(state: Partial<SubagentRenderState>): MinimalRenderContext {
 	return {
@@ -715,6 +716,61 @@ describe("renderResult: duration footer", () => {
 			$ cargo check
 
 			test-model, 200 context tokens, $0.02"
+		`);
+	});
+
+	it("expanded, running with startedAt", () => {
+		const snapshot: SubagentSnapshot = {
+			...CALL,
+			status: "running",
+			...USAGE,
+			model: "test-model",
+			trail: [
+				{ name: "bash", args: { command: "cargo check" } },
+				{ name: "read", args: { path: "/x.ts" } },
+				{ name: "edit", args: { path: "/y.ts" } },
+			],
+		};
+		expect(
+			renderContainer(
+				renderResult(buildResult(snapshot), expandedPartial, plain, makeContext({ startedAt: 6_000 })),
+				80,
+			),
+		).toMatchInlineSnapshot(`
+			"
+			Prompt:
+			 do the thing
+
+			$ cargo check
+			read /x.ts
+			edit /y.ts
+
+			Elapsed 4.0s • test-model, 200 context tokens, $0.02"
+		`);
+	});
+
+	it("expanded, long footer row wraps", () => {
+		const snapshot: SubagentSnapshot = {
+			...CALL,
+			status: "running",
+			contextTokens: 99_999,
+			cost: 0.99,
+			model: "a-very-long-provider/model-name",
+			trail: [],
+		};
+		expect(
+			renderContainer(
+				renderResult(buildResult(snapshot), expandedPartial, plain, makeContext({ startedAt: 0 })),
+				40,
+			),
+		).toMatchInlineSnapshot(`
+			"
+			Prompt:
+			 do the thing
+
+			Elapsed 10.0s •
+			a-very-long-provider/model-name, 100k
+			context tokens, $0.99"
 		`);
 	});
 
