@@ -18,8 +18,6 @@ const collapsed: ToolRenderResultOptions = { expanded: false, isPartial: false }
 const expanded: ToolRenderResultOptions = { expanded: true, isPartial: false };
 const collapsedPartial: ToolRenderResultOptions = { expanded: false, isPartial: true };
 
-const theme = plain as unknown as Parameters<typeof renderResult>[2];
-
 function makeContext(state: Partial<SubagentRenderState>) {
 	return {
 		invalidate: () => {},
@@ -64,22 +62,22 @@ afterEach(() => {
 
 describe("renderCall", () => {
 	it("source=project", () => {
-		const c = renderCall({ description: "recon", agent: "worker" }, theme, makeContext({ source: "project" }));
+		const c = renderCall({ description: "recon", agent: "worker" }, plain, makeContext({ source: "project" }));
 		expect(renderComponent(c, 80)).toMatchInlineSnapshot(`"subagent recon (project:worker)"`);
 	});
 
 	it("source=user", () => {
-		const c = renderCall({ description: "recon", agent: "worker" }, theme, makeContext({ source: "user" }));
+		const c = renderCall({ description: "recon", agent: "worker" }, plain, makeContext({ source: "user" }));
 		expect(renderComponent(c, 80)).toMatchInlineSnapshot(`"subagent recon (worker)"`);
 	});
 
 	it("source=undefined", () => {
-		const c = renderCall({ description: "recon", agent: "worker" }, theme, makeContext({}));
+		const c = renderCall({ description: "recon", agent: "worker" }, plain, makeContext({}));
 		expect(renderComponent(c, 80)).toMatchInlineSnapshot(`"subagent recon (worker)"`);
 	});
 
 	it("description not yet streamed", () => {
-		const c = renderCall({ agent: "worker" }, theme, makeContext({}));
+		const c = renderCall({ agent: "worker" }, plain, makeContext({}));
 		expect(renderComponent(c, 80)).toMatchInlineSnapshot(`"subagent ... (worker)"`);
 	});
 });
@@ -101,7 +99,7 @@ describe("renderResult", () => {
 			trail: [],
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), collapsed, theme, makeContext({})), 80),
+			renderContainer(renderResult(buildResult(snapshot), collapsed, plain, makeContext({})), 80),
 		).toMatchInlineSnapshot(`""`);
 	});
 
@@ -114,7 +112,7 @@ describe("renderResult", () => {
 			trail: [],
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), collapsed, theme, makeContext({})), 80),
+			renderContainer(renderResult(buildResult(snapshot), collapsed, plain, makeContext({})), 80),
 		).toMatchInlineSnapshot(`
 			"
 			test-model, 200 context tokens, $0.02"
@@ -131,7 +129,7 @@ describe("renderResult", () => {
 			finalText: "the final answer is 42",
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), collapsed, theme, makeContext({})), 80),
+			renderContainer(renderResult(buildResult(snapshot), collapsed, plain, makeContext({})), 80),
 		).toMatchInlineSnapshot(`
 			"
 			$ cargo check
@@ -151,7 +149,7 @@ describe("renderResult", () => {
 			trail: trail.slice(0, 2),
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), collapsed, theme, makeContext({})), 80),
+			renderContainer(renderResult(buildResult(snapshot), collapsed, plain, makeContext({})), 80),
 		).toMatchInlineSnapshot(`
 			"
 			$ cargo check
@@ -173,7 +171,7 @@ describe("renderResult", () => {
 			trail: trail.slice(0, 2),
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), collapsed, theme, makeContext({})), 80),
+			renderContainer(renderResult(buildResult(snapshot), collapsed, plain, makeContext({})), 80),
 		).toMatchInlineSnapshot(`
 			"
 			$ cargo check
@@ -200,7 +198,7 @@ describe("renderResult", () => {
 			trail: many,
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), collapsed, theme, makeContext({})), 80),
+			renderContainer(renderResult(buildResult(snapshot), collapsed, plain, makeContext({})), 80),
 		).toMatchInlineSnapshot(`
 			"
 			... (2 earlier tool calls)
@@ -227,7 +225,7 @@ describe("renderResult", () => {
 			trail: many,
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), collapsed, theme, makeContext({})), 80),
+			renderContainer(renderResult(buildResult(snapshot), collapsed, plain, makeContext({})), 80),
 		).toMatchInlineSnapshot(`
 			"
 			... (1 earlier tool call)
@@ -255,7 +253,7 @@ describe("renderResult", () => {
 			],
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), collapsed, theme, makeContext({})), 80),
+			renderContainer(renderResult(buildResult(snapshot), collapsed, plain, makeContext({})), 80),
 		).toMatchInlineSnapshot(`
 			"
 			$ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa...
@@ -275,7 +273,7 @@ describe("renderResult", () => {
 			trail: [{ name: "bash", args: { command: cmd } }],
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), collapsed, theme, makeContext({})), 120),
+			renderContainer(renderResult(buildResult(snapshot), collapsed, plain, makeContext({})), 120),
 		).toMatchInlineSnapshot(`
 			"
 			$ cd /a && python3 -c "⏎⇥data = open('x').read()⏎""
@@ -293,7 +291,7 @@ describe("renderResult", () => {
 			trail: [{ name: "bash", args: { command: cmd } }],
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), expanded, theme, makeContext({})), 120),
+			renderContainer(renderResult(buildResult(snapshot), expanded, plain, makeContext({})), 120),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -317,7 +315,7 @@ describe("renderResult", () => {
 			trail: [],
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), collapsed, theme, makeContext({})), 80),
+			renderContainer(renderResult(buildResult(snapshot), collapsed, plain, makeContext({})), 80),
 		).toMatchInlineSnapshot(`
 			"
 			Pi exited with code 1: eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee..."
@@ -338,7 +336,7 @@ describe("renderResult", () => {
 			trail: [],
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), collapsed, theme, makeContext({})), 120),
+			renderContainer(renderResult(buildResult(snapshot), collapsed, plain, makeContext({})), 120),
 		).toMatchInlineSnapshot(`
 			"
 			Error [ERR_MODULE_NOT_FOUND]: Cannot find module⏎⇥at finalizeResolution⏎⇥at moduleResolve"
@@ -356,7 +354,7 @@ describe("renderResult", () => {
 			trail: [],
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), expanded, theme, makeContext({})), 120),
+			renderContainer(renderResult(buildResult(snapshot), expanded, plain, makeContext({})), 120),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -379,7 +377,7 @@ describe("renderResult", () => {
 		};
 		expect(
 			renderContainer(
-				renderResult(buildResult(snapshot), collapsed, theme, makeContext({ startedAt: 0, endedAt: 10_000 })),
+				renderResult(buildResult(snapshot), collapsed, plain, makeContext({ startedAt: 0, endedAt: 10_000 })),
 				40,
 			),
 		).toMatchInlineSnapshot(`
@@ -399,7 +397,7 @@ describe("renderResult", () => {
 			trail: [{ name: "bash", args: { command: long } }],
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), expanded, theme, makeContext({})), 80),
+			renderContainer(renderResult(buildResult(snapshot), expanded, plain, makeContext({})), 80),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -422,7 +420,7 @@ describe("renderResult", () => {
 			finalText: "# Hello\n\nthe final answer is 42",
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), expanded, theme, makeContext({})), 80),
+			renderContainer(renderResult(buildResult(snapshot), expanded, plain, makeContext({})), 80),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -450,7 +448,7 @@ describe("renderResult", () => {
 			trail,
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), expanded, theme, makeContext({})), 80),
+			renderContainer(renderResult(buildResult(snapshot), expanded, plain, makeContext({})), 80),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -473,7 +471,7 @@ describe("renderResult", () => {
 			trail: [],
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), expanded, theme, makeContext({})), 80),
+			renderContainer(renderResult(buildResult(snapshot), expanded, plain, makeContext({})), 80),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -494,7 +492,7 @@ describe("renderResult", () => {
 			trail: many,
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), expanded, theme, makeContext({})), 80),
+			renderContainer(renderResult(buildResult(snapshot), expanded, plain, makeContext({})), 80),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -524,7 +522,7 @@ describe("renderResult", () => {
 			trail,
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), expanded, theme, makeContext({})), 80),
+			renderContainer(renderResult(buildResult(snapshot), expanded, plain, makeContext({})), 80),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -551,7 +549,7 @@ describe("renderResult", () => {
 			finalText: "done",
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), expanded, theme, makeContext({})), 80),
+			renderContainer(renderResult(buildResult(snapshot), expanded, plain, makeContext({})), 80),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -602,7 +600,7 @@ describe("renderResult", () => {
 			trail: variants,
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), expanded, theme, makeContext({})), 120),
+			renderContainer(renderResult(buildResult(snapshot), expanded, plain, makeContext({})), 120),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -645,7 +643,7 @@ describe("renderResult: duration footer", () => {
 		};
 		expect(
 			renderContainer(
-				renderResult(buildResult(snapshot), collapsedPartial, theme, makeContext({ startedAt: 6_000 })),
+				renderResult(buildResult(snapshot), collapsedPartial, plain, makeContext({ startedAt: 6_000 })),
 				80,
 			),
 		).toMatchInlineSnapshot(`
@@ -666,7 +664,7 @@ describe("renderResult: duration footer", () => {
 		};
 		expect(
 			renderContainer(
-				renderResult(buildResult(snapshot), collapsed, theme, makeContext({ startedAt: 1_000, endedAt: 11_000 })),
+				renderResult(buildResult(snapshot), collapsed, plain, makeContext({ startedAt: 1_000, endedAt: 11_000 })),
 				80,
 			),
 		).toMatchInlineSnapshot(`
@@ -688,7 +686,7 @@ describe("renderResult: duration footer", () => {
 		};
 		expect(
 			renderContainer(
-				renderResult(buildResult(snapshot), collapsed, theme, makeContext({ startedAt: 0, endedAt: 10_000 })),
+				renderResult(buildResult(snapshot), collapsed, plain, makeContext({ startedAt: 0, endedAt: 10_000 })),
 				80,
 			),
 		).toMatchInlineSnapshot(`
@@ -710,7 +708,7 @@ describe("renderResult: duration footer", () => {
 			trail,
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), collapsedPartial, theme, makeContext({})), 80),
+			renderContainer(renderResult(buildResult(snapshot), collapsedPartial, plain, makeContext({})), 80),
 		).toMatchInlineSnapshot(`
 			"
 			$ cargo check
@@ -730,7 +728,7 @@ describe("renderResult: duration footer", () => {
 		};
 		expect(
 			renderContainer(
-				renderResult(buildResult(snapshot), collapsedPartial, theme, makeContext({ startedAt: 9_000 })),
+				renderResult(buildResult(snapshot), collapsedPartial, plain, makeContext({ startedAt: 9_000 })),
 				80,
 			),
 		).toMatchInlineSnapshot(`

@@ -2,7 +2,6 @@ import * as os from "node:os";
 import {
 	type AgentToolResult,
 	getMarkdownTheme,
-	type Theme,
 	type ThemeColor,
 	type ToolRenderResultOptions,
 } from "@earendil-works/pi-coding-agent";
@@ -223,7 +222,7 @@ function formatRow(text: string, width: number, expanded: boolean): string[] {
 }
 
 /** The header for the subagent tool. */
-export function renderCall(args: Partial<Params>, theme: Theme, context: MinimalRenderContext): Component {
+export function renderCall(args: Partial<Params>, theme: MinimalTheme, context: MinimalRenderContext): Component {
 	const state = context.state;
 	if (context.executionStarted && state.startedAt === undefined) {
 		state.startedAt = Date.now();
@@ -254,7 +253,7 @@ function renderLabel(label: string, theme: MinimalTheme): Component {
 export function renderResult(
 	result: AgentToolResult<SubagentSnapshot>,
 	options: ToolRenderResultOptions,
-	theme: Theme,
+	theme: MinimalTheme,
 	context: MinimalRenderContext,
 	// Inject `expandHint` for testing.
 	expandHint?: string,
