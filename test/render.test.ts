@@ -8,6 +8,7 @@ import {
 	formatCost,
 	formatDuration,
 	formatTokenCount,
+	type MinimalRenderContext,
 	renderCall,
 	renderResult,
 	type SubagentRenderState,
@@ -18,7 +19,7 @@ const collapsed: ToolRenderResultOptions = { expanded: false, isPartial: false }
 const expanded: ToolRenderResultOptions = { expanded: true, isPartial: false };
 const collapsedPartial: ToolRenderResultOptions = { expanded: false, isPartial: true };
 
-function makeContext(state: Partial<SubagentRenderState>) {
+function makeContext(state: Partial<SubagentRenderState>): MinimalRenderContext {
 	return {
 		invalidate: () => {},
 		state: { ...state },

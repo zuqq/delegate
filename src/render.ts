@@ -201,7 +201,7 @@ export interface SubagentRenderState {
 }
 
 /** The subset of Pi's `ToolRenderContext` we depend on, to simplify testing. */
-interface MinimalRenderContext {
+export interface MinimalRenderContext {
 	invalidate: () => void;
 	state: SubagentRenderState;
 	executionStarted: boolean;
