@@ -63,24 +63,14 @@ afterEach(() => {
 });
 
 describe("renderCall", () => {
-	it("source=project", () => {
-		const c = renderCall({ description: "recon", agent: "worker" }, plain, makeContext({ source: "project" }));
-		expect(renderComponent(c, 80)).toMatchInlineSnapshot(`"subagent recon (project:worker)"`);
-	});
-
-	it("source=user", () => {
-		const c = renderCall({ description: "recon", agent: "worker" }, plain, makeContext({ source: "user" }));
-		expect(renderComponent(c, 80)).toMatchInlineSnapshot(`"subagent recon (worker)"`);
-	});
-
-	it("source=undefined", () => {
-		const c = renderCall({ description: "recon", agent: "worker" }, plain, makeContext({}));
-		expect(renderComponent(c, 80)).toMatchInlineSnapshot(`"subagent recon (worker)"`);
+	it("with description", () => {
+		const c = renderCall({ description: "recon" }, plain, makeContext({}));
+		expect(renderComponent(c, 80)).toMatchInlineSnapshot(`"subagent recon"`);
 	});
 
 	it("description not yet streamed", () => {
-		const c = renderCall({ agent: "worker" }, plain, makeContext({}));
-		expect(renderComponent(c, 80)).toMatchInlineSnapshot(`"subagent ... (worker)"`);
+		const c = renderCall({}, plain, makeContext({}));
+		expect(renderComponent(c, 80)).toMatchInlineSnapshot(`"subagent ..."`);
 	});
 });
 
@@ -587,8 +577,6 @@ describe("renderResult", () => {
 			{ name: "find", args: { pattern: "*.ts", path: "src" } },
 			{ name: "find", args: {} },
 			{ name: "grep", args: { pattern: "TODO", path: "src" } },
-			{ name: "subagent", args: { agent: "scout", description: "recon" } },
-			{ name: "subagent", args: { agent: "scout" } },
 			{ name: "subagent", args: { description: "recon" } },
 			{ name: "subagent", args: {} },
 			{ name: "custom_tool", args: { foo: 1, bar: "x" } },
@@ -623,10 +611,8 @@ describe("renderResult", () => {
 			find *.ts in src
 			find * in .
 			grep /TODO/ in src
-			subagent recon (scout)
-			subagent ... (scout)
-			subagent recon (...)
-			subagent ... (...)
+			subagent recon
+			subagent ...
 			custom_tool {"foo":1,"bar":"x"}"
 		`);
 	});

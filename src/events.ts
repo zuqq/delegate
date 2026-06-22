@@ -1,13 +1,9 @@
-import type { AgentSource } from "./agents.ts";
-
 export interface ToolCallTrailEntry {
 	name: string;
 	args: Record<string, unknown>;
 }
 
 export interface SubagentCall {
-	agent: string;
-	source?: AgentSource;
 	description: string;
 	task: string;
 }

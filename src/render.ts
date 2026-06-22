@@ -6,7 +6,6 @@ import {
 	type ToolRenderResultOptions,
 } from "@earendil-works/pi-coding-agent";
 import { type Component, Container, Markdown, Spacer, truncateToWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
-import type { AgentSource } from "./agents.ts";
 import type { SubagentSnapshot, ToolCallTrailEntry } from "./events.ts";
 import type { Params } from "./schema.ts";
 
@@ -70,16 +69,10 @@ export interface MinimalTheme {
 	bold(text: string): string;
 }
 
-function formatAgent(agent: string | undefined, source: AgentSource | undefined): string | undefined {
-	if (!agent) return agent;
-	return source === "project" ? `project:${agent}` : agent;
-}
-
-function formatHeader(description: string | undefined, agent: string | undefined, theme: MinimalTheme): string {
+function formatHeader(description: string | undefined, theme: MinimalTheme): string {
 	const toolDisplay = theme.fg("toolTitle", theme.bold("subagent"));
 	const descriptionDisplay = theme.fg("accent", description || "...");
-	const agentDisplay = theme.fg("muted", agent || "...");
-	return `${toolDisplay} ${descriptionDisplay} (${agentDisplay})`;
+	return `${toolDisplay} ${descriptionDisplay}`;
 }
 
 function tildify(p: string): string {
@@ -131,8 +124,7 @@ function formatToolCall(name: string, args: Record<string, unknown>, theme: Mini
 			);
 		case "subagent": {
 			const description = (args.description as string) || "...";
-			const agent = (args.agent as string) || "...";
-			return fg("muted", "subagent ") + fg("accent", description) + fg("dim", ` (${agent})`);
+			return fg("muted", "subagent ") + fg("accent", description);
 		}
 		default:
 			return fg("accent", name) + fg("dim", ` ${JSON.stringify(args)}`);
@@ -197,7 +189,6 @@ export interface SubagentRenderState {
 	startedAt?: number;
 	endedAt?: number;
 	interval?: ReturnType<typeof setInterval>;
-	source?: AgentSource;
 }
 
 /** The subset of Pi's `ToolRenderContext` we depend on, to simplify testing. */
@@ -228,8 +219,7 @@ export function renderCall(args: Partial<Params>, theme: MinimalTheme, context: 
 		state.startedAt = Date.now();
 		state.endedAt = undefined;
 	}
-	const name = formatAgent(args.agent, state.source);
-	const headerText = formatHeader(args.description, name, theme);
+	const headerText = formatHeader(args.description, theme);
 	const expanded = context.expanded;
 	return {
 		render: (width: number): string[] => formatRow(headerText, width, expanded),
@@ -260,8 +250,6 @@ export function renderResult(
 ): Container {
 	const snapshot = result.details;
 	const state = context.state;
-	// Mirror source so the next `renderCall` frame can badge the header.
-	state.source = snapshot.source;
 	const container = new Container();
 
 	const running = options.isPartial && !context.isError;
