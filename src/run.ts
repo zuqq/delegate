@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { createInterface } from "node:readline";
-import type { AgentConfig } from "./agents.ts";
+import type { Agent } from "./agents.ts";
 import {
 	emptySubagentState,
 	finalizeSubagentState,
@@ -18,7 +18,7 @@ import {
 const SIGKILL_GRACE_MS = 5_000;
 
 export async function runSubagent(
-	agent: AgentConfig,
+	agent: Agent,
 	call: SubagentCall,
 	cwd: string,
 	signal: AbortSignal | undefined,
@@ -29,7 +29,7 @@ export async function runSubagent(
 	try {
 		const cliArgs: string[] = ["--mode", "json", "-p", "--no-session"];
 		if (agent.model) cliArgs.push("--model", agent.model);
-		if (agent.tools?.length) cliArgs.push("--tools", agent.tools.join(","));
+		if (agent.tools) cliArgs.push("--tools", agent.tools.join(","));
 		if (agent.systemPrompt) {
 			const promptPath = await writePromptToTmpFile(agent.systemPrompt);
 			cleanups.push(() => removeTmpFile(promptPath));

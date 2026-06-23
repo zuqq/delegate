@@ -5,20 +5,21 @@ import {
 	keyHint,
 	type ToolResultEvent,
 } from "@earendil-works/pi-coding-agent";
-import { type AgentConfig, loadAgents } from "./agents.ts";
+import { type Agent, loadAgents } from "./agents.ts";
 import { emptySubagentState, type SubagentSnapshot, snapshotSubagentState } from "./events.ts";
 import { renderCall, renderResult, type SubagentRenderState } from "./render.ts";
 import { runSubagent } from "./run.ts";
 import { type Params, ParamsSchema } from "./schema.ts";
 
-function buildAvailableAgents(agents: AgentConfig[]): string {
-	return agents
-		.map((a) => `- ${a.name}: ${a.description}`)
-		.sort()
-		.join("\n");
+function buildAvailableAgents(agents: Map<string, Agent>): string {
+	const lines = [];
+	for (const [name, agent] of agents) {
+		lines.push(`- ${name}: ${agent.description}`);
+	}
+	return lines.sort().join("\n");
 }
 
-export function buildDescription(agents: AgentConfig[]): string {
+export function buildDescription(agents: Map<string, Agent>): string {
 	const preamble =
 		"Run one task in a specialized subagent with an isolated context window. Each agent has its own system prompt, model, and tools. For coordination (sequencing, branching, fan-out), emit multiple subagent calls; sibling tool calls run in parallel by default.";
 	return `${preamble}\n\nAvailable agents:\n\n${buildAvailableAgents(agents)}`;
@@ -53,19 +54,19 @@ export function handleToolResult(event: ToolResultEvent): { isError: true } | un
 	}
 }
 
-function buildUnknownAgentResult(params: Params, agents: AgentConfig[]): AgentToolResult<SubagentSnapshot> {
+function buildUnknownAgentResult(params: Params, agents: Map<string, Agent>): AgentToolResult<SubagentSnapshot> {
 	const errorMessage = `Unknown agent: ${params.agent}\n\nAvailable agents:\n\n${buildAvailableAgents(agents)}`;
 	const snapshot = snapshotSubagentState(params, emptySubagentState(), "failed", errorMessage);
 	return buildResult(snapshot);
 }
 
 export default function (pi: ExtensionAPI): void {
-	const { loaded: catalog, skipped } = loadAgents(process.cwd(), getAgentDir());
+	const { agents, diagnostics } = loadAgents(process.cwd(), getAgentDir());
 
-	if (skipped.length > 0) {
+	if (diagnostics.length > 0) {
 		pi.on("session_start", (_event, ctx) => {
-			for (const { filePath, reason } of skipped) {
-				ctx.ui.notify(`Ignored ${filePath}: ${reason}`, "warning");
+			for (const { filePath, message } of diagnostics) {
+				ctx.ui.notify(`${filePath}: ${message}`, "warning");
 			}
 		});
 	}
@@ -75,14 +76,14 @@ export default function (pi: ExtensionAPI): void {
 	pi.registerTool<typeof ParamsSchema, SubagentSnapshot, SubagentRenderState>({
 		name: "subagent",
 		label: "Subagent",
-		description: buildDescription(catalog),
+		description: buildDescription(agents),
 		parameters: ParamsSchema,
 		renderCall,
 		renderResult: (result, options, theme, context) =>
 			renderResult(result, options, theme, context, keyHint("app.tools.expand", "to expand")),
 		async execute(_toolCallId, params, signal, onUpdate, ctx) {
-			const agent = catalog.find((a) => a.name === params.agent);
-			if (!agent) return buildUnknownAgentResult(params, catalog);
+			const agent = agents.get(params.agent);
+			if (!agent) return buildUnknownAgentResult(params, agents);
 
 			const call = {
 				agent: agent.name,

@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { test } from "vitest";
-import type { AgentConfig } from "../src/agents.ts";
+import type { Agent } from "../src/agents.ts";
 import type { SubagentSnapshot, SubagentStatus } from "../src/events.ts";
 import type { MinimalTheme } from "../src/render.ts";
 
@@ -18,19 +18,12 @@ export const CALL = {
 
 export const USAGE = { contextTokens: 200, cost: 0.02 };
 
-export function makeAgentConfig(name: string, description: string): AgentConfig {
+export function makeAgent(name: string, description: string): Agent {
 	return { name, description, systemPrompt: "", source: "user", filePath: `/x/${name}.md` };
 }
 
 export function makeSubagentSnapshot(status: SubagentStatus): SubagentSnapshot {
 	return { ...CALL, contextTokens: 0, cost: 0, model: "m", trail: [], ...status };
-}
-
-interface AgentDirs {
-	/** A temp dir. */
-	tmpDir: string;
-	/** A temp dir with an empty `agents/` subdir, to pass as a user agent dir. */
-	agentDir: string;
 }
 
 async function withTmpDir(prefix: string, use: (dir: string) => Promise<void>): Promise<void> {
@@ -42,12 +35,17 @@ async function withTmpDir(prefix: string, use: (dir: string) => Promise<void>): 
 	}
 }
 
-export const it = test.extend<AgentDirs>({
+export const it = test.extend<{
+	/** A temp dir. */
+	tmpDir: string;
+	/** A temp dir with an empty `agents/` subdir, to pass as the user agent dir. */
+	agentDir: string;
+}>({
 	// biome-ignore lint/correctness/noEmptyPattern: Vitest requires object destructuring
 	tmpDir: ({}, use) => withTmpDir("delegate-tmp-", use),
 	// biome-ignore lint/correctness/noEmptyPattern: Vitest requires object destructuring
 	agentDir: ({}, use) =>
-		withTmpDir("delegate-user-", async (dir) => {
+		withTmpDir("delegate-agent-", async (dir) => {
 			await fs.promises.mkdir(path.join(dir, "agents"));
 			await use(dir);
 		}),
