@@ -140,7 +140,7 @@ export function updateSubagentState(state: SubagentState, event: Event): void {
 			state.trail.push({ name: event.toolName, args: event.args });
 			return;
 		case "message_end":
-			// snapshot, not a running sum
+			// `contextTokens` is a snapshot, not a delta.
 			if (event.contextTokens !== undefined) state.contextTokens = event.contextTokens;
 			if (event.cost !== undefined) state.cost += event.cost;
 			if (event.model) state.model = event.model;
