@@ -134,6 +134,9 @@ function formatToolCall(name: string, args: Record<string, unknown>, theme: Mini
 /** The maximal number of tool calls to show when collapsed. */
 const TRAIL_DISPLAY_LIMIT = 4;
 
+/** The indentation for wrapped trail continuation lines when expanded. */
+const TRAIL_CONTINUATION_INDENTATION = 1;
+
 /** The list of tool calls issued by a subagent. */
 function formatTrailLines(
 	trail: ToolCallTrailEntry[],
@@ -212,6 +215,14 @@ function formatRow(text: string, width: number, expanded: boolean): string[] {
 	return expanded ? wrapTextWithAnsi(text, width) : [truncateToWidth(flatten(text), width, "...")];
 }
 
+/** Like `formatRow` expanded, but indents continuation lines so they read as one tool call. */
+function wrapTrailRow(text: string, width: number): string[] {
+	const indentation = Math.max(0, Math.min(TRAIL_CONTINUATION_INDENTATION, width - 1));
+	const prefix = " ".repeat(indentation);
+	const wrapped = wrapTextWithAnsi(text, Math.max(1, width - indentation));
+	return wrapped.map((line, i) => (i === 0 ? line : prefix + line));
+}
+
 /** The header for the subagent tool. */
 export function renderCall(args: Partial<Params>, theme: MinimalTheme, context: MinimalRenderContext): Component {
 	const state = context.state;
@@ -274,7 +285,8 @@ export function renderResult(
 	if (trailLines.length > 0) {
 		container.addChild(new Spacer(1));
 		container.addChild({
-			render: (width: number): string[] => trailLines.flatMap((l) => formatRow(l, width, options.expanded)),
+			render: (width: number): string[] =>
+				trailLines.flatMap((l) => (options.expanded ? wrapTrailRow(l, width) : formatRow(l, width, false))),
 			invalidate: () => {},
 		});
 	}

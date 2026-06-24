@@ -1,6 +1,6 @@
 import * as os from "node:os";
 import type { ToolRenderResultOptions } from "@earendil-works/pi-coding-agent";
-import type { Component, Container } from "@earendil-works/pi-tui";
+import { type Component, type Container, visibleWidth } from "@earendil-works/pi-tui";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SubagentSnapshot } from "../src/events.ts";
 import { buildResult } from "../src/index.ts";
@@ -295,8 +295,8 @@ describe("renderResult", () => {
 			 do the thing
 
 			$ python3 -c "
-				print(1)
-			""
+			 	print(1)
+			 ""
 		`);
 	});
 
@@ -401,9 +401,59 @@ describe("renderResult", () => {
 			 do the thing
 
 			$
-			xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-			xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-			xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+			 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+			 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+			 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+		`);
+	});
+
+	it("expanded, narrow widths never overflow", () => {
+		const snapshot: SubagentSnapshot = {
+			...PARAMS,
+			task: "",
+			status: "running",
+			contextTokens: 0,
+			cost: 0,
+			model: "",
+			trail: [
+				{ name: "bash", args: { command: 'echo hi; grep -rn "Result" src' } },
+				{ name: "grep", args: { pattern: "Result", path: "src" } },
+			],
+		};
+		for (const width of [1, 2, 3, 5]) {
+			const container = renderResult(buildResult(snapshot), expanded, plain, makeContext({}));
+			const lines = container.children.flatMap((child) => child.render(width));
+			for (const line of lines) {
+				expect(visibleWidth(line)).toBeLessThanOrEqual(width);
+			}
+		}
+	});
+
+	it("expanded, indents wrapped continuation lines", () => {
+		const snapshot: SubagentSnapshot = {
+			...PARAMS,
+			status: "running",
+			contextTokens: 0,
+			cost: 0,
+			model: "",
+			trail: [
+				{
+					name: "bash",
+					args: { command: 'echo "searching the typescript sources in repository"; grep -rn "Result" src' },
+				},
+				{ name: "grep", args: { pattern: "Result", path: "src" } },
+			],
+		};
+		expect(
+			renderContainer(renderResult(buildResult(snapshot), expanded, plain, makeContext({})), 60),
+		).toMatchInlineSnapshot(`
+			"
+			Prompt:
+			 do the thing
+
+			$ echo "searching the typescript sources in repository";
+			 grep -rn "Result" src
+			grep /Result/ in src"
 		`);
 	});
 
