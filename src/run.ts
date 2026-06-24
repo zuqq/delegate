@@ -4,22 +4,22 @@ import {
 	emptySubagentState,
 	finalizeSubagentState,
 	parseEvent,
-	type SubagentCall,
 	type SubagentSnapshot,
 	type SubagentTermination,
 	snapshotSubagentState,
 	updateSubagentState,
 } from "./events.ts";
+import type { Params } from "./schema.ts";
 
 const SIGKILL_GRACE_MS = 5_000;
 
 export async function runSubagent(
-	call: SubagentCall,
+	params: Params,
 	cwd: string,
 	signal: AbortSignal | undefined,
 	onUpdate: (snapshot: SubagentSnapshot) => void,
 ): Promise<SubagentSnapshot> {
-	const cliArgs = ["--mode", "json", "-p", "--no-session", call.task];
+	const cliArgs = ["--mode", "json", "-p", "--no-session", params.task];
 
 	// Bun's `--compile` standalone sets `argv[1]` to a `/$bunfs/root/...`
 	// virtual path; spawn `execPath` directly in that case.
@@ -56,7 +56,7 @@ export async function runSubagent(
 		const event = parseEvent(line);
 		if (!event) return;
 		updateSubagentState(state, event);
-		onUpdate(snapshotSubagentState(call, state, "running"));
+		onUpdate(snapshotSubagentState(params, state, "running"));
 	});
 
 	const termination = await new Promise<SubagentTermination>((resolve) => {
@@ -69,5 +69,5 @@ export async function runSubagent(
 	});
 	// `signal` may be shared across tool calls; detach our listener.
 	signal?.removeEventListener("abort", onAbort);
-	return finalizeSubagentState(call, state, termination);
+	return finalizeSubagentState(params, state, termination);
 }
