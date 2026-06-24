@@ -1,15 +1,8 @@
-import type { AgentSource } from "./agents.ts";
+import type { Params } from "./schema.ts";
 
 export interface ToolCallTrailEntry {
 	name: string;
 	args: Record<string, unknown>;
-}
-
-export interface SubagentCall {
-	agent: string;
-	source?: AgentSource;
-	description: string;
-	task: string;
 }
 
 interface SubagentTrace {
@@ -25,7 +18,7 @@ export type SubagentStatus =
 	| { status: "failed"; errorMessage?: string }
 	| { status: "aborted" };
 
-export type SubagentSnapshot = SubagentCall & SubagentTrace & SubagentStatus;
+export type SubagentSnapshot = Params & SubagentTrace & SubagentStatus;
 
 export interface SubagentState {
 	trail: ToolCallTrailEntry[];
@@ -152,13 +145,13 @@ export function updateSubagentState(state: SubagentState, event: Event): void {
 }
 
 export function snapshotSubagentState(
-	call: SubagentCall,
+	params: Params,
 	state: SubagentState,
 	status: SubagentSnapshot["status"],
 	errorMessage?: string,
 ): SubagentSnapshot {
 	return {
-		...call,
+		...params,
 		// Alias the append-only `state.trail`.
 		trail: state.trail,
 		contextTokens: state.contextTokens,
@@ -177,18 +170,18 @@ export type SubagentTermination =
 	| { type: "spawnError"; message: string };
 
 export function finalizeSubagentState(
-	call: SubagentCall,
+	params: Params,
 	state: SubagentState,
 	termination: SubagentTermination,
 ): SubagentSnapshot {
-	if (termination.type === "aborted") return snapshotSubagentState(call, state, "aborted");
-	if (termination.type === "spawnError") return snapshotSubagentState(call, state, "failed", termination.message);
+	if (termination.type === "aborted") return snapshotSubagentState(params, state, "aborted");
+	if (termination.type === "spawnError") return snapshotSubagentState(params, state, "failed", termination.message);
 
 	const { code, stderr } = termination;
 	const failed = (code !== null && code !== 0) || state.stopReason === "error" || state.stopReason === "aborted";
 	if (failed) {
 		const message = state.errorMessage ?? (stderr.trim() || `Pi exited with code ${code ?? "(null)"}`);
-		return snapshotSubagentState(call, state, "failed", message);
+		return snapshotSubagentState(params, state, "failed", message);
 	}
-	return snapshotSubagentState(call, state, "succeeded");
+	return snapshotSubagentState(params, state, "succeeded");
 }

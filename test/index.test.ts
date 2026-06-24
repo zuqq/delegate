@@ -1,21 +1,12 @@
 import type { ToolResultEvent } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it } from "vitest";
-import { buildDescription, buildResult, handleToolResult } from "../src/index.ts";
-import { makeAgent, makeSubagentSnapshot } from "./fixtures.ts";
+import type { SubagentSnapshot, SubagentStatus } from "../src/events.ts";
+import { buildResult, handleToolResult } from "../src/index.ts";
+import { PARAMS } from "./fixtures.ts";
 
-describe("buildDescription", () => {
-	it("appends available agents to the description", () => {
-		const description = buildDescription(
-			new Map([
-				["scout", makeAgent("scout", "investigate the codebase")],
-				["planner", makeAgent("planner", "produce step-by-step plans")],
-			]),
-		);
-		expect(description).toContain("Available agents:");
-		expect(description).toContain("- scout: investigate the codebase");
-		expect(description).toContain("- planner: produce step-by-step plans");
-	});
-});
+function makeSubagentSnapshot(status: SubagentStatus): SubagentSnapshot {
+	return { ...PARAMS, contextTokens: 0, cost: 0, model: "m", trail: [], ...status };
+}
 
 describe("handleToolResult", () => {
 	it.each([

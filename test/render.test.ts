@@ -9,16 +9,21 @@ import {
 	formatDuration,
 	formatTokenCount,
 	type MinimalRenderContext,
+	type MinimalTheme,
 	renderCall,
 	renderResult,
 	type SubagentRenderState,
 } from "../src/render.ts";
-import { CALL, plain, USAGE } from "./fixtures.ts";
+import { PARAMS } from "./fixtures.ts";
+
+const USAGE = { contextTokens: 200, cost: 0.02 };
 
 const collapsed: ToolRenderResultOptions = { expanded: false, isPartial: false };
 const expanded: ToolRenderResultOptions = { expanded: true, isPartial: false };
 const collapsedPartial: ToolRenderResultOptions = { expanded: false, isPartial: true };
 const expandedPartial: ToolRenderResultOptions = { expanded: true, isPartial: true };
+
+const plain: MinimalTheme = { fg: (_c, t) => t, bold: (t) => t };
 
 function makeContext(state: Partial<SubagentRenderState>): MinimalRenderContext {
 	return {
@@ -63,24 +68,14 @@ afterEach(() => {
 });
 
 describe("renderCall", () => {
-	it("source=project", () => {
-		const c = renderCall({ description: "recon", agent: "worker" }, plain, makeContext({ source: "project" }));
-		expect(renderComponent(c, 80)).toMatchInlineSnapshot(`"subagent recon (project:worker)"`);
-	});
-
-	it("source=user", () => {
-		const c = renderCall({ description: "recon", agent: "worker" }, plain, makeContext({ source: "user" }));
-		expect(renderComponent(c, 80)).toMatchInlineSnapshot(`"subagent recon (worker)"`);
-	});
-
-	it("source=undefined", () => {
-		const c = renderCall({ description: "recon", agent: "worker" }, plain, makeContext({}));
-		expect(renderComponent(c, 80)).toMatchInlineSnapshot(`"subagent recon (worker)"`);
+	it("with description", () => {
+		const c = renderCall({ description: "recon" }, plain, makeContext({}));
+		expect(renderComponent(c, 80)).toMatchInlineSnapshot(`"subagent recon"`);
 	});
 
 	it("description not yet streamed", () => {
-		const c = renderCall({ agent: "worker" }, plain, makeContext({}));
-		expect(renderComponent(c, 80)).toMatchInlineSnapshot(`"subagent ... (worker)"`);
+		const c = renderCall({}, plain, makeContext({}));
+		expect(renderComponent(c, 80)).toMatchInlineSnapshot(`"subagent ..."`);
 	});
 });
 
@@ -93,7 +88,7 @@ describe("renderResult", () => {
 
 	it("collapsed, running with nothing yet", () => {
 		const snapshot: SubagentSnapshot = {
-			...CALL,
+			...PARAMS,
 			status: "running",
 			contextTokens: 0,
 			cost: 0,
@@ -107,7 +102,7 @@ describe("renderResult", () => {
 
 	it("collapsed, running with usage but no trail", () => {
 		const snapshot: SubagentSnapshot = {
-			...CALL,
+			...PARAMS,
 			status: "running",
 			...USAGE,
 			model: "test-model",
@@ -123,7 +118,7 @@ describe("renderResult", () => {
 
 	it("collapsed, succeeded", () => {
 		const snapshot: SubagentSnapshot = {
-			...CALL,
+			...PARAMS,
 			status: "succeeded",
 			...USAGE,
 			model: "test-model",
@@ -144,7 +139,7 @@ describe("renderResult", () => {
 
 	it("collapsed, aborted", () => {
 		const snapshot: SubagentSnapshot = {
-			...CALL,
+			...PARAMS,
 			status: "aborted",
 			...USAGE,
 			model: "test-model",
@@ -165,7 +160,7 @@ describe("renderResult", () => {
 
 	it("collapsed, failed", () => {
 		const snapshot: SubagentSnapshot = {
-			...CALL,
+			...PARAMS,
 			status: "failed",
 			errorMessage: "Pi exited with code 1",
 			...USAGE,
@@ -193,7 +188,7 @@ describe("renderResult", () => {
 			{ name: "bash", args: { command: "cargo build" } },
 		];
 		const snapshot: SubagentSnapshot = {
-			...CALL,
+			...PARAMS,
 			status: "running",
 			...USAGE,
 			model: "test-model",
@@ -220,7 +215,7 @@ describe("renderResult", () => {
 			{ name: "bash", args: { command: "cargo build" } },
 		];
 		const snapshot: SubagentSnapshot = {
-			...CALL,
+			...PARAMS,
 			status: "running",
 			...USAGE,
 			model: "test-model",
@@ -243,7 +238,7 @@ describe("renderResult", () => {
 	it("collapsed, long trail entries", () => {
 		const long = (ch: string) => ch.repeat(500);
 		const snapshot: SubagentSnapshot = {
-			...CALL,
+			...PARAMS,
 			status: "running",
 			contextTokens: 0,
 			cost: 0,
@@ -267,7 +262,7 @@ describe("renderResult", () => {
 	it("collapsed, multi-line bash command", () => {
 		const cmd = "cd /a && python3 -c \"\n\tdata = open('x').read()\n\"";
 		const snapshot: SubagentSnapshot = {
-			...CALL,
+			...PARAMS,
 			status: "running",
 			contextTokens: 0,
 			cost: 0,
@@ -285,7 +280,7 @@ describe("renderResult", () => {
 	it("expanded, multi-line bash command", () => {
 		const cmd = 'python3 -c "\n\tprint(1)\n"';
 		const snapshot: SubagentSnapshot = {
-			...CALL,
+			...PARAMS,
 			status: "running",
 			contextTokens: 0,
 			cost: 0,
@@ -308,7 +303,7 @@ describe("renderResult", () => {
 	it("collapsed, long status row", () => {
 		const longErr = `Pi exited with code 1: ${"e".repeat(500)}`;
 		const snapshot: SubagentSnapshot = {
-			...CALL,
+			...PARAMS,
 			status: "failed",
 			errorMessage: longErr,
 			contextTokens: 0,
@@ -329,7 +324,7 @@ describe("renderResult", () => {
 
 	it("collapsed, failed status with newlines and tabs", () => {
 		const snapshot: SubagentSnapshot = {
-			...CALL,
+			...PARAMS,
 			status: "failed",
 			errorMessage: errorMessageWithStackTrace,
 			contextTokens: 0,
@@ -347,7 +342,7 @@ describe("renderResult", () => {
 
 	it("expanded, failed status with newlines and tabs", () => {
 		const snapshot: SubagentSnapshot = {
-			...CALL,
+			...PARAMS,
 			status: "failed",
 			errorMessage: errorMessageWithStackTrace,
 			contextTokens: 0,
@@ -370,7 +365,7 @@ describe("renderResult", () => {
 
 	it("collapsed, long footer row", () => {
 		const snapshot: SubagentSnapshot = {
-			...CALL,
+			...PARAMS,
 			status: "succeeded",
 			contextTokens: 99_999,
 			cost: 0.99,
@@ -391,7 +386,7 @@ describe("renderResult", () => {
 	it("expanded, long bash command", () => {
 		const long = "x".repeat(200);
 		const snapshot: SubagentSnapshot = {
-			...CALL,
+			...PARAMS,
 			status: "running",
 			contextTokens: 0,
 			cost: 0,
@@ -414,7 +409,7 @@ describe("renderResult", () => {
 
 	it("expanded, succeeded with finalText", () => {
 		const snapshot: SubagentSnapshot = {
-			...CALL,
+			...PARAMS,
 			status: "succeeded",
 			...USAGE,
 			model: "test-model",
@@ -443,7 +438,7 @@ describe("renderResult", () => {
 
 	it("expanded, empty finalText", () => {
 		const snapshot: SubagentSnapshot = {
-			...CALL,
+			...PARAMS,
 			status: "succeeded",
 			...USAGE,
 			model: "test-model",
@@ -466,7 +461,7 @@ describe("renderResult", () => {
 
 	it("expanded, running with prompt but no trail yet", () => {
 		const snapshot: SubagentSnapshot = {
-			...CALL,
+			...PARAMS,
 			status: "running",
 			...USAGE,
 			model: "test-model",
@@ -487,7 +482,7 @@ describe("renderResult", () => {
 		const many = [];
 		for (let i = 0; i < 10; i++) many.push({ name: "bash", args: { command: `c${i}` } });
 		const snapshot: SubagentSnapshot = {
-			...CALL,
+			...PARAMS,
 			status: "succeeded",
 			...USAGE,
 			model: "test-model",
@@ -517,7 +512,7 @@ describe("renderResult", () => {
 
 	it("expanded, aborted", () => {
 		const snapshot: SubagentSnapshot = {
-			...CALL,
+			...PARAMS,
 			status: "aborted",
 			...USAGE,
 			model: "test-model",
@@ -542,7 +537,7 @@ describe("renderResult", () => {
 
 	it("expanded, multi-line markdown task", () => {
 		const snapshot: SubagentSnapshot = {
-			...CALL,
+			...PARAMS,
 			task: "# Task\n\nDo the thing",
 			status: "succeeded",
 			...USAGE,
@@ -587,14 +582,12 @@ describe("renderResult", () => {
 			{ name: "find", args: { pattern: "*.ts", path: "src" } },
 			{ name: "find", args: {} },
 			{ name: "grep", args: { pattern: "TODO", path: "src" } },
-			{ name: "subagent", args: { agent: "scout", description: "recon" } },
-			{ name: "subagent", args: { agent: "scout" } },
 			{ name: "subagent", args: { description: "recon" } },
 			{ name: "subagent", args: {} },
 			{ name: "custom_tool", args: { foo: 1, bar: "x" } },
 		];
 		const snapshot: SubagentSnapshot = {
-			...CALL,
+			...PARAMS,
 			status: "succeeded",
 			contextTokens: 0,
 			cost: 0,
@@ -623,10 +616,8 @@ describe("renderResult", () => {
 			find *.ts in src
 			find * in .
 			grep /TODO/ in src
-			subagent recon (scout)
-			subagent ... (scout)
-			subagent recon (...)
-			subagent ... (...)
+			subagent recon
+			subagent ...
 			custom_tool {"foo":1,"bar":"x"}"
 		`);
 	});
@@ -637,7 +628,7 @@ describe("renderResult: duration footer", () => {
 
 	it("running, with startedAt", () => {
 		const snapshot: SubagentSnapshot = {
-			...CALL,
+			...PARAMS,
 			status: "running",
 			...USAGE,
 			model: "test-model",
@@ -658,7 +649,7 @@ describe("renderResult: duration footer", () => {
 
 	it("succeeded, with frozen state", () => {
 		const snapshot: SubagentSnapshot = {
-			...CALL,
+			...PARAMS,
 			status: "succeeded",
 			...USAGE,
 			model: "test-model",
@@ -679,7 +670,7 @@ describe("renderResult: duration footer", () => {
 
 	it("failed, terminal frame", () => {
 		const snapshot: SubagentSnapshot = {
-			...CALL,
+			...PARAMS,
 			status: "failed",
 			errorMessage: "Pi exited with code 1",
 			...USAGE,
@@ -703,7 +694,7 @@ describe("renderResult: duration footer", () => {
 
 	it("running, no startedAt", () => {
 		const snapshot: SubagentSnapshot = {
-			...CALL,
+			...PARAMS,
 			status: "running",
 			...USAGE,
 			model: "test-model",
@@ -721,7 +712,7 @@ describe("renderResult: duration footer", () => {
 
 	it("expanded, running with startedAt", () => {
 		const snapshot: SubagentSnapshot = {
-			...CALL,
+			...PARAMS,
 			status: "running",
 			...USAGE,
 			model: "test-model",
@@ -751,7 +742,7 @@ describe("renderResult: duration footer", () => {
 
 	it("expanded, long footer row wraps", () => {
 		const snapshot: SubagentSnapshot = {
-			...CALL,
+			...PARAMS,
 			status: "running",
 			contextTokens: 99_999,
 			cost: 0.99,
@@ -776,7 +767,7 @@ describe("renderResult: duration footer", () => {
 
 	it("running, only startedAt, no usage/model", () => {
 		const snapshot: SubagentSnapshot = {
-			...CALL,
+			...PARAMS,
 			status: "running",
 			contextTokens: 0,
 			cost: 0,

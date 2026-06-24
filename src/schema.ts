@@ -1,12 +1,8 @@
 import { type Static, Type } from "typebox";
 
 export const ParamsSchema = Type.Object({
-	agent: Type.String({
-		description: "Name of the agent to invoke; must match one of the available agents.",
-		minLength: 1,
-	}),
 	task: Type.String({
-		description: "A description of the task, sent to the subagent as its user prompt.",
+		description: "The task for the subagent to perform. It shares no history, so include everything it needs.",
 		minLength: 1,
 	}),
 	description: Type.String({
