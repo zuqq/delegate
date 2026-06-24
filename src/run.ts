@@ -19,12 +19,12 @@ export async function runSubagent(
 	signal: AbortSignal | undefined,
 	onUpdate: (snapshot: SubagentSnapshot) => void,
 ): Promise<SubagentSnapshot> {
-	const exe = process.argv[1];
-	const args = ["--mode", "json", "-p", "--no-session", params.task];
+	const script = process.argv[1];
+	const piArgs = ["--mode", "json", "-p", "--no-session", params.task];
 	// Bun's `--compile` standalone sets `argv[1]` to a `/$bunfs/root/...`
 	// virtual path; spawn `execPath` directly in that case.
-	const command = exe.startsWith("/$bunfs/root/") ? args : [exe, ...args];
-	const proc = spawn(process.execPath, command, {
+	const args = script.startsWith("/$bunfs/root/") ? piArgs : [script, ...piArgs];
+	const proc = spawn(process.execPath, args, {
 		cwd,
 		stdio: ["ignore", "pipe", "pipe"],
 	});
