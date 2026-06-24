@@ -19,20 +19,17 @@ export async function runSubagent(
 	signal: AbortSignal | undefined,
 	onUpdate: (snapshot: SubagentSnapshot) => void,
 ): Promise<SubagentSnapshot> {
-	const cliArgs = ["--mode", "json", "-p", "--no-session", params.task];
-
+	const exe = process.argv[1];
+	const args = ["--mode", "json", "-p", "--no-session", params.task];
 	// Bun's `--compile` standalone sets `argv[1]` to a `/$bunfs/root/...`
 	// virtual path; spawn `execPath` directly in that case.
-	const script = process.argv[1];
-	const piArgs = !script || script.startsWith("/$bunfs/root/") ? cliArgs : [script, ...cliArgs];
-	const proc = spawn(process.execPath, piArgs, {
+	const command = exe.startsWith("/$bunfs/root/") ? args : [exe, ...args];
+	const proc = spawn(process.execPath, command, {
 		cwd,
-		shell: false,
 		stdio: ["ignore", "pipe", "pipe"],
 	});
 	const stdout = proc.stdout;
 	const stderr = proc.stderr;
-	if (!stdout || !stderr) throw new Error("runSubagent: expected stdout and stderr to be piped");
 
 	let stderrText = "";
 	stderr.setEncoding("utf8");
