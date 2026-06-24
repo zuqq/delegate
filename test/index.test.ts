@@ -1,7 +1,12 @@
 import type { ToolResultEvent } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it } from "vitest";
+import type { SubagentSnapshot, SubagentStatus } from "../src/events.ts";
 import { buildResult, handleToolResult } from "../src/index.ts";
-import { makeSubagentSnapshot } from "./fixtures.ts";
+import { PARAMS } from "./fixtures.ts";
+
+function makeSubagentSnapshot(status: SubagentStatus): SubagentSnapshot {
+	return { ...PARAMS, contextTokens: 0, cost: 0, model: "m", trail: [], ...status };
+}
 
 describe("handleToolResult", () => {
 	it.each([

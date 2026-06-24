@@ -9,16 +9,21 @@ import {
 	formatDuration,
 	formatTokenCount,
 	type MinimalRenderContext,
+	type MinimalTheme,
 	renderCall,
 	renderResult,
 	type SubagentRenderState,
 } from "../src/render.ts";
-import { PARAMS, plain, USAGE } from "./fixtures.ts";
+import { PARAMS } from "./fixtures.ts";
+
+const USAGE = { contextTokens: 200, cost: 0.02 };
 
 const collapsed: ToolRenderResultOptions = { expanded: false, isPartial: false };
 const expanded: ToolRenderResultOptions = { expanded: true, isPartial: false };
 const collapsedPartial: ToolRenderResultOptions = { expanded: false, isPartial: true };
 const expandedPartial: ToolRenderResultOptions = { expanded: true, isPartial: true };
+
+const plain: MinimalTheme = { fg: (_c, t) => t, bold: (t) => t };
 
 function makeContext(state: Partial<SubagentRenderState>): MinimalRenderContext {
 	return {
