@@ -16,7 +16,7 @@ export function buildResult(snapshot: SubagentSnapshot): AgentToolResult<Subagen
 			text = "";
 			break;
 		case "succeeded":
-			text = snapshot.finalText || "";
+			text = snapshot.finalText ?? "";
 			break;
 		case "failed":
 			text = snapshot.errorMessage ?? "subagent failed";

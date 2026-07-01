@@ -77,7 +77,6 @@ export function parseEvent(line: string): Event | undefined {
 		return undefined;
 	}
 	if (raw === null) return undefined;
-
 	if (raw.type === "tool_execution_start") return parseToolExecutionStart(raw);
 	if (raw.type === "message_end") return parseMessageEnd(raw);
 	return undefined;
@@ -107,7 +106,6 @@ function parseMessageEnd(raw: RawEvent): MessageEndEvent | undefined {
 	if (message.model) event.model = message.model;
 	if (message.stopReason) event.stopReason = message.stopReason;
 	if (message.errorMessage) event.errorMessage = message.errorMessage;
-
 	if (message.content) event.finalText = extractAssistantMessageText(message.content);
 
 	return event;
@@ -133,9 +131,9 @@ export function updateSubagentState(state: SubagentState, event: Event): void {
 			if (event.contextTokens !== undefined) state.contextTokens = event.contextTokens;
 			if (event.cost !== undefined) state.cost += event.cost;
 			if (event.model) state.model = event.model;
-			if (event.finalText) state.finalText = event.finalText;
 			if (event.stopReason) state.stopReason = event.stopReason;
 			if (event.errorMessage) state.errorMessage = event.errorMessage;
+			if (event.finalText) state.finalText = event.finalText;
 			return;
 	}
 }
@@ -170,14 +168,18 @@ export function finalizeSubagentState(
 	state: SubagentState,
 	termination: SubagentTermination,
 ): SubagentSnapshot {
-	if (termination.type === "aborted") return snapshotSubagentState(params, state, "aborted");
-	if (termination.type === "spawnError") return snapshotSubagentState(params, state, "failed", termination.message);
-
-	const { code, stderr } = termination;
-	const failed = (code !== null && code !== 0) || state.stopReason === "error" || state.stopReason === "aborted";
-	if (failed) {
-		const message = state.errorMessage ?? (stderr.trim() || `Pi exited with code ${code ?? "(null)"}`);
-		return snapshotSubagentState(params, state, "failed", message);
+	switch (termination.type) {
+		case "exit": {
+			const { code, stderr } = termination;
+			if (code || state.stopReason === "error" || state.stopReason === "aborted") {
+				const message = state.errorMessage ?? (stderr.trim() || `Pi exited with code ${code ?? "(null)"}`);
+				return snapshotSubagentState(params, state, "failed", message);
+			}
+			return snapshotSubagentState(params, state, "succeeded");
+		}
+		case "aborted":
+			return snapshotSubagentState(params, state, "aborted");
+		case "spawnError":
+			return snapshotSubagentState(params, state, "failed", termination.message);
 	}
-	return snapshotSubagentState(params, state, "succeeded");
 }

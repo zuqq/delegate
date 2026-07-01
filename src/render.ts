@@ -170,10 +170,10 @@ function formatTerminalStatus(snapshot: SubagentSnapshot, theme: MinimalTheme): 
 		case "running":
 		case "succeeded":
 			return undefined;
-		case "aborted":
-			return theme.fg("muted", "Operation aborted");
 		case "failed":
 			return theme.fg("muted", snapshot.errorMessage ?? "Operation failed");
+		case "aborted":
+			return theme.fg("muted", "Operation aborted");
 	}
 }
 
@@ -311,16 +311,16 @@ export function renderResult(
 	const summary = formatSummary(snapshot.contextTokens, snapshot.cost, snapshot.model, theme);
 	// Decide footer presence outside the closure: Pi's `Box` reserves spacing
 	// for present children, so an empty `render` still leaves a gap.
-	if (startedAt !== undefined || summary !== "") {
+	if (startedAt !== undefined || summary) {
 		container.addChild(new Spacer(1));
 		container.addChild({
 			render: (width: number): string[] => {
 				let footer = summary;
 				if (startedAt !== undefined) {
-					const durationMs = (endedAt ?? Date.now()) - startedAt;
 					const verb = running ? "Elapsed" : "Took";
-					const duration = theme.fg("dim", `${verb} ${formatDuration(durationMs)}`);
-					footer = summary ? `${duration}${theme.fg("muted", " • ")}${summary}` : duration;
+					const duration = formatDuration((endedAt ?? Date.now()) - startedAt);
+					footer = theme.fg("dim", `${verb} ${duration}`);
+					if (summary) footer += `${theme.fg("muted", " • ")}${summary}`;
 				}
 				return formatRow(footer, width, options.expanded);
 			},
