@@ -9,7 +9,7 @@ interface SubagentTrace {
 	trail: ToolCallTrailEntry[];
 	contextTokens: number;
 	cost: number;
-	model?: string;
+	model: string | undefined;
 }
 
 export type SubagentStatus =
@@ -20,18 +20,14 @@ export type SubagentStatus =
 
 export type SubagentSnapshot = Params & SubagentTrace & SubagentStatus;
 
-export interface SubagentState {
-	trail: ToolCallTrailEntry[];
-	contextTokens: number;
-	cost: number;
-	model?: string;
+export interface SubagentState extends SubagentTrace {
 	stopReason?: string;
 	errorMessage?: string;
 	finalText?: string;
 }
 
 export function emptySubagentState(): SubagentState {
-	return { trail: [], contextTokens: 0, cost: 0 };
+	return { trail: [], contextTokens: 0, cost: 0, model: undefined };
 }
 
 interface ToolExecutionStartEvent {
