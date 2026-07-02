@@ -165,26 +165,26 @@ function formatTrailLines(
 }
 
 /** A terminal status row, or `undefined` while running or on success. */
-function formatTerminalStatus(snapshot: SubagentSnapshot, theme: MinimalTheme): string | undefined {
+function formatTerminalStatus(snapshot: SubagentSnapshot): string | undefined {
 	switch (snapshot.status) {
 		case "running":
 		case "succeeded":
 			return undefined;
 		case "failed":
-			return theme.fg("muted", snapshot.errorMessage ?? "Operation failed");
+			return snapshot.errorMessage ?? "Operation failed";
 		case "aborted":
-			return theme.fg("muted", "Operation aborted");
+			return "Operation aborted";
 	}
 }
 
 /** The resource summary at the end of the footer. */
-function formatSummary(contextTokens: number, cost: number, model: string | undefined, theme: MinimalTheme): string {
+function formatSummary(contextTokens: number, cost: number, model: string | undefined): string {
 	if (!model) return "";
 	const parts: string[] = [];
 	parts.push(model);
 	parts.push(`${formatTokenCount(contextTokens)} context token${contextTokens === 1 ? "" : "s"}`);
 	parts.push(formatCost(cost));
-	return theme.fg("dim", parts.join(", "));
+	return parts.join(", ");
 }
 
 /** The per-frame state persisted by Pi between `renderCall` and `renderResult`. */
@@ -286,7 +286,9 @@ export function renderResult(
 		container.addChild(new Spacer(1));
 		container.addChild({
 			render: (width: number): string[] =>
-				trailLines.flatMap((l) => (options.expanded ? wrapTrailRow(l, width) : formatRow(l, width, false))),
+				trailLines.flatMap((line) =>
+					options.expanded ? wrapTrailRow(line, width) : formatRow(line, width, false),
+				),
 			invalidate: () => {},
 		});
 	}
@@ -297,31 +299,32 @@ export function renderResult(
 		container.addChild(renderMarkdown(snapshot.finalText));
 	}
 
-	const terminalStatus = formatTerminalStatus(snapshot, theme);
+	const terminalStatus = formatTerminalStatus(snapshot);
 	if (terminalStatus) {
 		container.addChild(new Spacer(1));
 		container.addChild({
-			render: (width: number): string[] => formatRow(terminalStatus, width, options.expanded),
+			render: (width: number): string[] => formatRow(theme.fg("muted", terminalStatus), width, options.expanded),
 			invalidate: () => {},
 		});
 	}
 
 	const startedAt = state.startedAt;
 	const endedAt = state.endedAt;
-	const summary = formatSummary(snapshot.contextTokens, snapshot.cost, snapshot.model, theme);
+	const summary = formatSummary(snapshot.contextTokens, snapshot.cost, snapshot.model);
 	// Decide footer presence outside the closure: Pi's `Box` reserves spacing
 	// for present children, so an empty `render` still leaves a gap.
 	if (startedAt !== undefined || summary) {
 		container.addChild(new Spacer(1));
 		container.addChild({
 			render: (width: number): string[] => {
-				let footer = summary;
+				const parts: string[] = [];
 				if (startedAt !== undefined) {
 					const verb = running ? "Elapsed" : "Took";
 					const duration = formatDuration((endedAt ?? Date.now()) - startedAt);
-					footer = theme.fg("dim", `${verb} ${duration}`);
-					if (summary) footer += `${theme.fg("muted", " • ")}${summary}`;
+					parts.push(`${verb} ${duration}`);
 				}
+				if (summary) parts.push(summary);
+				const footer = parts.map((part) => theme.fg("dim", part)).join(theme.fg("muted", " • "));
 				return formatRow(footer, width, options.expanded);
 			},
 			invalidate: () => {},
