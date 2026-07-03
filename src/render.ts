@@ -1,4 +1,5 @@
 import * as os from "node:os";
+import * as path from "node:path";
 import {
 	type AgentToolResult,
 	getMarkdownTheme,
@@ -75,22 +76,27 @@ function formatHeader(description: string | undefined, theme: MinimalTheme): str
 	return `${toolDisplay} ${descriptionDisplay}`;
 }
 
-function tildify(p: string): string {
-	const home = os.homedir();
-	if (p === home) return "~";
-	return p.startsWith(`${home}/`) ? `~${p.slice(home.length)}` : p;
+export function tildify(p: string, home: string): string {
+	if (!home) return p;
+	// Appending `path.sep` before comparing allows us handle exact matches and
+	// descendants uniformly.
+	const homePrefix = path.normalize(home + path.sep);
+	const normalized = path.normalize(p + path.sep);
+	if (!normalized.startsWith(homePrefix)) return p;
+	return path.join("~", normalized.slice(homePrefix.length, -1));
 }
 
 function formatToolCall(name: string, args: Record<string, unknown>, theme: MinimalTheme): string {
 	const fg = theme.fg.bind(theme);
+	const home = os.homedir();
 	switch (name) {
 		case "bash":
 			return fg("muted", "$ ") + fg("toolOutput", (args.command as string) || "...");
 		case "read": {
-			const path = tildify((args.file_path || args.path || "...") as string);
+			const p = tildify((args.file_path || args.path || "...") as string, home);
 			const offset = args.offset as number | undefined;
 			const limit = args.limit as number | undefined;
-			let out = fg("muted", "read ") + fg("accent", path);
+			let out = fg("muted", "read ") + fg("accent", p);
 			if (offset !== undefined || limit !== undefined) {
 				const start = offset ?? 1;
 				const end = limit !== undefined ? start + limit - 1 : "";
@@ -99,28 +105,28 @@ function formatToolCall(name: string, args: Record<string, unknown>, theme: Mini
 			return out;
 		}
 		case "write": {
-			const path = tildify((args.file_path || args.path || "...") as string);
+			const p = tildify((args.file_path || args.path || "...") as string, home);
 			const content = (args.content as string) || "";
 			const lines = content ? content.split("\n").length : 0;
-			let out = fg("muted", "write ") + fg("accent", path);
+			let out = fg("muted", "write ") + fg("accent", p);
 			if (lines > 1) out += fg("dim", ` (${lines} lines)`);
 			return out;
 		}
 		case "edit":
-			return fg("muted", "edit ") + fg("accent", tildify((args.file_path || args.path || "...") as string));
+			return fg("muted", "edit ") + fg("accent", tildify((args.file_path || args.path || "...") as string, home));
 		case "ls":
-			return fg("muted", "ls ") + fg("accent", tildify((args.file_path || args.path || ".") as string));
+			return fg("muted", "ls ") + fg("accent", tildify((args.file_path || args.path || ".") as string, home));
 		case "find":
 			return (
 				fg("muted", "find ") +
 				fg("accent", (args.pattern as string) || "*") +
-				fg("dim", ` in ${tildify((args.file_path || args.path || ".") as string)}`)
+				fg("dim", ` in ${tildify((args.file_path || args.path || ".") as string, home)}`)
 			);
 		case "grep":
 			return (
 				fg("muted", "grep ") +
 				fg("accent", `/${(args.pattern as string) || ""}/`) +
-				fg("dim", ` in ${tildify((args.file_path || args.path || ".") as string)}`)
+				fg("dim", ` in ${tildify((args.file_path || args.path || ".") as string, home)}`)
 			);
 		case "subagent": {
 			const description = (args.description as string) || "...";

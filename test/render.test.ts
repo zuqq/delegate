@@ -13,6 +13,7 @@ import {
 	renderCall,
 	renderResult,
 	type SubagentRenderState,
+	tildify,
 } from "../src/render.ts";
 import { PARAMS } from "./fixtures.ts";
 
@@ -893,5 +894,24 @@ describe("formatDuration", () => {
 		[-500, "-0.5s"],
 	] as const)("formatDuration(%i) === %s", (input, expected) => {
 		expect(formatDuration(input)).toBe(expected);
+	});
+});
+
+describe("tildify", () => {
+	it.each([
+		["/home/user/delegate/src", "/home/user", "~/delegate/src"],
+		["/home/user/x/", "/home/user", "~/x"],
+		["/home/user//x", "/home/user", "~/x"],
+		["/home/user", "/home/user", "~"],
+		["/home/user/", "/home/user", "~"],
+		["/home/username/x.ts", "/home/user", "/home/username/x.ts"],
+		["/home/user/../root/x", "/home/user", "/home/user/../root/x"],
+		["./x", "/home/user", "./x"],
+		["src/render.ts", "/home/user", "src/render.ts"],
+		["/", "/home/user", "/"],
+		["/home/user/x", "/home/user/", "~/x"],
+		["/x", "", "/x"],
+	] as const)("tildify(%s, %s) === %s", (p, home, expected) => {
+		expect(tildify(p, home)).toBe(expected);
 	});
 });
