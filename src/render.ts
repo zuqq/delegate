@@ -158,8 +158,8 @@ function formatTrailLines(
 		);
 		entries = trail.slice(-TRAIL_DISPLAY_LIMIT);
 	}
-	for (const e of entries) {
-		lines.push(formatToolCall(e.name, e.args, theme, home));
+	for (const entry of entries) {
+		lines.push(formatToolCall(entry.name, entry.args, theme, home));
 	}
 	return lines;
 }
