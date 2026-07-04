@@ -629,11 +629,7 @@ describe("renderResult", () => {
 			{ name: "bash", args: { command: "ls -la" } },
 			{ name: "bash", args: {} },
 			{ name: "read", args: { path: "/x.ts" } },
-			{ name: "read", args: { path: "/x.ts", offset: 10, limit: 5 } },
-			{ name: "read", args: { path: "/x.ts", offset: 42 } },
 			{ name: "read", args: { path: `${HOME}/src/foo.ts` } },
-			{ name: "write", args: { path: "/x.ts", content: "a\nb\nc" } },
-			{ name: "write", args: { path: "/x.ts", content: "single line" } },
 			{ name: "write", args: { path: "/x.ts" } },
 			{ name: "edit", args: { path: "/y.ts" } },
 			{ name: "ls", args: {} },
@@ -663,11 +659,7 @@ describe("renderResult", () => {
 			$ ls -la
 			$ ...
 			read /x.ts
-			read /x.ts:10-14
-			read /x.ts:42
 			read ~/src/foo.ts
-			write /x.ts (3 lines)
-			write /x.ts
 			write /x.ts
 			edit /y.ts
 			ls .

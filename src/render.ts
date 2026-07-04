@@ -86,52 +86,48 @@ export function tildify(p: string, home: string): string {
 }
 
 function formatToolCall(name: string, args: Record<string, unknown>, theme: MinimalTheme, home: string): string {
-	const fg = theme.fg.bind(theme);
 	switch (name) {
 		case "bash":
-			return fg("muted", "$ ") + fg("toolOutput", (args.command as string) || "...");
+			return theme.fg("muted", "$ ") + theme.fg("toolOutput", (args.command as string) || "...");
 		case "read": {
-			const p = tildify((args.file_path || args.path || "...") as string, home);
-			const offset = args.offset as number | undefined;
-			const limit = args.limit as number | undefined;
-			let out = fg("muted", "read ") + fg("accent", p);
-			if (offset !== undefined || limit !== undefined) {
-				const start = offset ?? 1;
-				const end = limit !== undefined ? start + limit - 1 : "";
-				out += fg("warning", `:${start}${end ? `-${end}` : ""}`);
-			}
-			return out;
+			return (
+				theme.fg("muted", "read ") +
+				theme.fg("accent", tildify((args.file_path || args.path || "...") as string, home))
+			);
 		}
 		case "write": {
-			const p = tildify((args.file_path || args.path || "...") as string, home);
-			const content = (args.content as string) || "";
-			const lines = content ? content.split("\n").length : 0;
-			let out = fg("muted", "write ") + fg("accent", p);
-			if (lines > 1) out += fg("dim", ` (${lines} lines)`);
-			return out;
+			return (
+				theme.fg("muted", "write ") +
+				theme.fg("accent", tildify((args.file_path || args.path || "...") as string, home))
+			);
 		}
 		case "edit":
-			return fg("muted", "edit ") + fg("accent", tildify((args.file_path || args.path || "...") as string, home));
+			return (
+				theme.fg("muted", "edit ") +
+				theme.fg("accent", tildify((args.file_path || args.path || "...") as string, home))
+			);
 		case "ls":
-			return fg("muted", "ls ") + fg("accent", tildify((args.file_path || args.path || ".") as string, home));
+			return (
+				theme.fg("muted", "ls ") + theme.fg("accent", tildify((args.file_path || args.path || ".") as string, home))
+			);
 		case "find":
 			return (
-				fg("muted", "find ") +
-				fg("accent", (args.pattern as string) || "*") +
-				fg("dim", ` in ${tildify((args.file_path || args.path || ".") as string, home)}`)
+				theme.fg("muted", "find ") +
+				theme.fg("accent", (args.pattern as string) || "*") +
+				theme.fg("dim", ` in ${tildify((args.file_path || args.path || ".") as string, home)}`)
 			);
 		case "grep":
 			return (
-				fg("muted", "grep ") +
-				fg("accent", `/${(args.pattern as string) || ""}/`) +
-				fg("dim", ` in ${tildify((args.file_path || args.path || ".") as string, home)}`)
+				theme.fg("muted", "grep ") +
+				theme.fg("accent", `/${(args.pattern as string) || ""}/`) +
+				theme.fg("dim", ` in ${tildify((args.file_path || args.path || ".") as string, home)}`)
 			);
 		case "subagent": {
 			const description = (args.description as string) || "...";
-			return fg("muted", "subagent ") + fg("accent", description);
+			return theme.fg("muted", "subagent ") + theme.fg("accent", description);
 		}
 		default:
-			return fg("accent", name) + fg("dim", ` ${JSON.stringify(args)}`);
+			return theme.fg("accent", name) + theme.fg("dim", ` ${JSON.stringify(args)}`);
 	}
 }
 
@@ -150,7 +146,6 @@ function formatTrailLines(
 	expandHint: string | undefined,
 ): string[] {
 	if (trail.length === 0) return [];
-	const fg = theme.fg.bind(theme);
 	const lines: string[] = [];
 	let entries = trail;
 	if (!expanded && trail.length > TRAIL_DISPLAY_LIMIT) {
@@ -158,8 +153,8 @@ function formatTrailLines(
 		const noun = `tool call${earlier === 1 ? "" : "s"}`;
 		lines.push(
 			expandHint
-				? `${fg("muted", `... (${earlier} earlier ${noun},`)} ${expandHint})`
-				: fg("muted", `... (${earlier} earlier ${noun})`),
+				? `${theme.fg("muted", `... (${earlier} earlier ${noun},`)} ${expandHint})`
+				: theme.fg("muted", `... (${earlier} earlier ${noun})`),
 		);
 		entries = trail.slice(-TRAIL_DISPLAY_LIMIT);
 	}
