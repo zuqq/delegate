@@ -1,3 +1,4 @@
+import * as os from "node:os";
 import {
 	type AgentToolResult,
 	type ExtensionAPI,
@@ -49,7 +50,7 @@ export default function (pi: ExtensionAPI): void {
 		parameters: ParamsSchema,
 		renderCall,
 		renderResult: (result, options, theme, context) =>
-			renderResult(result, options, theme, context, keyHint("app.tools.expand", "to expand")),
+			renderResult(result, options, theme, context, os.homedir(), keyHint("app.tools.expand", "to expand")),
 		async execute(_toolCallId, params, signal, onUpdate, ctx) {
 			const initial = snapshotSubagentState(params, emptySubagentState(), "running");
 			// Update immediately so the renderer shows something before the

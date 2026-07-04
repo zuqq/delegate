@@ -1,4 +1,3 @@
-import * as os from "node:os";
 import * as path from "node:path";
 import {
 	type AgentToolResult,
@@ -86,9 +85,8 @@ export function tildify(p: string, home: string): string {
 	return path.join("~", normalized.slice(homePrefix.length, -1));
 }
 
-function formatToolCall(name: string, args: Record<string, unknown>, theme: MinimalTheme): string {
+function formatToolCall(name: string, args: Record<string, unknown>, theme: MinimalTheme, home: string): string {
 	const fg = theme.fg.bind(theme);
-	const home = os.homedir();
 	switch (name) {
 		case "bash":
 			return fg("muted", "$ ") + fg("toolOutput", (args.command as string) || "...");
@@ -148,6 +146,7 @@ function formatTrailLines(
 	trail: ToolCallTrailEntry[],
 	expanded: boolean,
 	theme: MinimalTheme,
+	home: string,
 	expandHint: string | undefined,
 ): string[] {
 	if (trail.length === 0) return [];
@@ -165,7 +164,7 @@ function formatTrailLines(
 		entries = trail.slice(-TRAIL_DISPLAY_LIMIT);
 	}
 	for (const e of entries) {
-		lines.push(formatToolCall(e.name, e.args, theme));
+		lines.push(formatToolCall(e.name, e.args, theme, home));
 	}
 	return lines;
 }
@@ -262,8 +261,9 @@ export function renderResult(
 	options: ToolRenderResultOptions,
 	theme: MinimalTheme,
 	context: MinimalRenderContext,
-	// Inject `expandHint` for testing.
-	expandHint?: string,
+	// Inject `home` and `expandHint` for testing.
+	home: string,
+	expandHint: string | undefined,
 ): Container {
 	const snapshot = result.details;
 	const state = context.state;
@@ -287,7 +287,7 @@ export function renderResult(
 		container.addChild(renderMarkdown(snapshot.task));
 	}
 
-	const trailLines = formatTrailLines(snapshot.trail, options.expanded, theme, expandHint);
+	const trailLines = formatTrailLines(snapshot.trail, options.expanded, theme, home, expandHint);
 	if (trailLines.length > 0) {
 		container.addChild(new Spacer(1));
 		container.addChild({
