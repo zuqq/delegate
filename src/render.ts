@@ -150,7 +150,7 @@ function formatTrailLines(
 	if (!expanded && trail.length > TRAIL_DISPLAY_LIMIT) {
 		const earlier = trail.length - TRAIL_DISPLAY_LIMIT;
 		const noun = `tool call${earlier === 1 ? "" : "s"}`;
-		lines.push(`${theme.fg("muted", `... (${earlier} earlier ${noun},`)} ${expandHint})`);
+		lines.push(`${theme.fg("muted", `... (${earlier} earlier ${noun},`)} ${expandHint}${theme.fg("muted", ")")}`);
 		entries = trail.slice(-TRAIL_DISPLAY_LIMIT);
 	}
 	for (const entry of entries) {
