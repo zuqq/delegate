@@ -133,6 +133,11 @@ describe("finalizeSubagentState", () => {
 		expect(d).toMatchObject({ status: "failed", errorMessage: "Pi exited with code 0" });
 	});
 
+	it("returns `failed` with a `(null)` exit code when the child was killed", () => {
+		const d = finalizeSubagentState(PARAMS, emptySubagentState(), { type: "exit", code: null, stderr: "" });
+		expect(d).toMatchObject({ status: "failed", errorMessage: "Pi exited with code (null)" });
+	});
+
 	it("returns `failed` when `stopReason` is `error`, preferring the recorded `errorMessage` over `stderr`", () => {
 		const s = { ...emptySubagentState(), stopReason: "error", errorMessage: "provider 500" };
 		const d = finalizeSubagentState(PARAMS, s, { type: "exit", code: 0, stderr: "ignored" });

@@ -171,7 +171,7 @@ export function finalizeSubagentState(
 	switch (termination.type) {
 		case "exit": {
 			const { code, stderr } = termination;
-			if (code || state.stopReason === "error" || state.stopReason === "aborted") {
+			if (code !== 0 || state.stopReason === "error" || state.stopReason === "aborted") {
 				const message = state.errorMessage ?? (stderr.trim() || `Pi exited with code ${code ?? "(null)"}`);
 				return snapshotSubagentState(params, state, "failed", message);
 			}
