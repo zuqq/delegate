@@ -9,25 +9,24 @@ import {
 import { PARAMS } from "./fixtures.ts";
 
 describe("parseEvent", () => {
-	it("returns undefined for blank lines and malformed JSON", () => {
-		expect(parseEvent("")).toBeUndefined();
-		expect(parseEvent("   ")).toBeUndefined();
-		expect(parseEvent("not json")).toBeUndefined();
-		expect(parseEvent("null")).toBeUndefined();
+	it.each([
+		[""],
+		["   "],
+		["not json"],
+		["null"],
+		['{"type":"message_update"}'],
+		['{"type":"tool_execution_end"}'],
+		['{"type":"message_end","message":{"role":"user"}}'],
+	] as const)("parseEvent(%j) === undefined", (line) => {
+		expect(parseEvent(line)).toBeUndefined();
 	});
 
-	it("returns undefined for unknown event types and non-assistant messages", () => {
-		expect(parseEvent(JSON.stringify({ type: "message_update" }))).toBeUndefined();
-		expect(parseEvent(JSON.stringify({ type: "tool_execution_end" }))).toBeUndefined();
-		expect(parseEvent(JSON.stringify({ type: "message_end", message: { role: "user" } }))).toBeUndefined();
-	});
-
-	it("parses tool_execution_start with default empty args", () => {
+	it("parses `tool_execution_start`, defaulting `args` to `{}`", () => {
 		const event = parseEvent(JSON.stringify({ type: "tool_execution_start", toolName: "bash" }));
 		expect(event).toEqual({ type: "tool_execution_start", toolName: "bash", args: {} });
 	});
 
-	it("concatenates text parts in an assistant message and ignores other parts", () => {
+	it("concatenates the `text` parts of an assistant message, ignoring other parts", () => {
 		const line = JSON.stringify({
 			type: "message_end",
 			message: {
@@ -39,12 +38,12 @@ describe("parseEvent", () => {
 				],
 			},
 		});
-		expect(parseEvent(line)).toMatchObject({ type: "message_end", finalText: "Hello world." });
+		expect(parseEvent(line)).toEqual({ type: "message_end", finalText: "Hello world." });
 	});
 });
 
 describe("updateSubagentState", () => {
-	it("appends tool_execution_start to the trail, in order", () => {
+	it("appends `tool_execution_start` events to the trail, in order", () => {
 		const s = emptySubagentState();
 		updateSubagentState(s, { type: "tool_execution_start", toolName: "A", args: { x: 1 } });
 		updateSubagentState(s, { type: "tool_execution_start", toolName: "B", args: {} });
@@ -52,14 +51,14 @@ describe("updateSubagentState", () => {
 		expect(s.trail[0].args).toEqual({ x: 1 });
 	});
 
-	it("sums cost across message_end events but snapshots contextTokens", () => {
+	it("sums `cost` across `message_end` events but keeps only the latest `contextTokens`", () => {
 		const s = emptySubagentState();
 		updateSubagentState(s, { type: "message_end", contextTokens: 100, cost: 0.01 });
 		updateSubagentState(s, { type: "message_end", contextTokens: 200, cost: 0.02 });
 		expect(s).toMatchObject({ contextTokens: 200, cost: 0.03 });
 	});
 
-	it("records model, stopReason, errorMessage, finalText from message_end", () => {
+	it("records `model`, `stopReason`, `errorMessage`, and `finalText` from `message_end`", () => {
 		const s = emptySubagentState();
 		updateSubagentState(s, {
 			type: "message_end",
@@ -73,38 +72,46 @@ describe("updateSubagentState", () => {
 });
 
 describe("finalizeSubagentState", () => {
-	it("returns succeeded on clean exit", () => {
+	it("returns `succeeded` on a clean exit", () => {
 		const d = finalizeSubagentState(PARAMS, emptySubagentState(), { type: "exit", code: 0, stderr: "" });
 		expect(d.status).toBe("succeeded");
 	});
 
-	it("returns failed when the exit code is non-zero, with a generic message", () => {
+	it("returns `failed` on a non-zero exit code, with a generic message", () => {
 		const d = finalizeSubagentState(PARAMS, emptySubagentState(), { type: "exit", code: 7, stderr: "" });
-		expect(d).toMatchObject({ status: "failed", errorMessage: expect.stringContaining("Pi exited with code 7") });
+		expect(d).toMatchObject({ status: "failed", errorMessage: "Pi exited with code 7" });
 	});
 
-	it("returns failed when stopReason is 'error', preferring the recorded errorMessage", () => {
+	it("returns `failed` when `stopReason` is `error`, preferring the recorded `errorMessage` over `stderr`", () => {
 		const s = { ...emptySubagentState(), stopReason: "error", errorMessage: "provider 500" };
 		const d = finalizeSubagentState(PARAMS, s, { type: "exit", code: 0, stderr: "ignored" });
 		expect(d).toMatchObject({ status: "failed", errorMessage: "provider 500" });
 	});
 
-	it("falls back to stderr when no errorMessage was recorded", () => {
+	it("returns `failed` with the trimmed `stderr` when no `errorMessage` was recorded", () => {
 		const d = finalizeSubagentState(PARAMS, emptySubagentState(), { type: "exit", code: 2, stderr: "bad config\n" });
 		expect(d).toMatchObject({ status: "failed", errorMessage: "bad config" });
 	});
 
-	it("returns aborted regardless of exit details", () => {
+	it("returns `aborted` even when `stopReason` is `error`", () => {
 		const d = finalizeSubagentState(PARAMS, { ...emptySubagentState(), stopReason: "error" }, { type: "aborted" });
 		expect(d.status).toBe("aborted");
 	});
 
-	it("returns failed with the spawn error message", () => {
+	it("returns `failed` on a spawn error, with its message", () => {
 		const d = finalizeSubagentState(PARAMS, emptySubagentState(), { type: "spawnError", message: "ENOENT: pi" });
 		expect(d).toMatchObject({ status: "failed", errorMessage: "ENOENT: pi" });
 	});
 
-	it("copies state fields into the SubagentSnapshot", () => {
+});
+
+describe("snapshotSubagentState", () => {
+	it("preserves `finalText` on `succeeded`", () => {
+		const s = { ...emptySubagentState(), finalText: "the final answer is 42" };
+		expect(snapshotSubagentState(PARAMS, s, "succeeded")).toMatchObject({ finalText: "the final answer is 42" });
+	});
+
+	it("copies usage, `model`, and the trail from the state", () => {
 		const s = {
 			...emptySubagentState(),
 			contextTokens: 42,
@@ -113,20 +120,12 @@ describe("finalizeSubagentState", () => {
 			finalText: "done",
 			trail: [{ name: "bash", args: {} }],
 		};
-		const d = finalizeSubagentState(PARAMS, s, { type: "exit", code: 0, stderr: "" });
-		expect(d).toMatchObject({
+		expect(snapshotSubagentState(PARAMS, s, "succeeded")).toMatchObject({
 			contextTokens: 42,
 			cost: 0.5,
 			model: "m",
 			finalText: "done",
 			trail: [{ name: "bash", args: {} }],
 		});
-	});
-});
-
-describe("snapshotSubagentState", () => {
-	it("preserves finalText on succeeded", () => {
-		const s = { ...emptySubagentState(), finalText: "the final answer is 42" };
-		expect(snapshotSubagentState(PARAMS, s, "succeeded")).toMatchObject({ finalText: "the final answer is 42" });
 	});
 });

@@ -10,52 +10,29 @@ function makeSubagentSnapshot(status: SubagentStatus): SubagentSnapshot {
 
 describe("handleToolResult", () => {
 	it.each([
-		["aborted", { isError: true }],
-		["failed", { isError: true }],
-		["succeeded", undefined],
-		["running", undefined],
-	] as const)("status %s → %j", (status, expected) => {
-		expect(handleToolResult({ toolName: "subagent", details: { status } } as ToolResultEvent)).toEqual(expected);
-	});
-
-	it("ignores other tools' results", () => {
-		expect(handleToolResult({ toolName: "bash", details: { status: "failed" } } as ToolResultEvent)).toBeUndefined();
-	});
-
-	// Pi can clobber `details` on a thrown error.
-	it("tolerates missing/empty details", () => {
-		expect(handleToolResult({ toolName: "subagent", details: undefined } as ToolResultEvent)).toBeUndefined();
-		expect(handleToolResult({ toolName: "subagent", details: {} } as ToolResultEvent)).toBeUndefined();
+		[{ toolName: "subagent", details: { status: "aborted" } }, { isError: true }],
+		[{ toolName: "subagent", details: { status: "failed" } }, { isError: true }],
+		[{ toolName: "subagent", details: { status: "succeeded" } }, undefined],
+		[{ toolName: "subagent", details: { status: "running" } }, undefined],
+		[{ toolName: "bash", details: { status: "failed" } }, undefined],
+		[{ toolName: "subagent", details: undefined }, undefined],
+		[{ toolName: "subagent", details: {} }, undefined],
+	] as const)("handleToolResult(%j) === %j", (event, expected) => {
+		expect(handleToolResult(event as ToolResultEvent)).toEqual(expected);
 	});
 });
 
 describe("buildResult", () => {
-	it("returns the snapshot as details and a single text block", () => {
-		const snapshot = makeSubagentSnapshot({ status: "succeeded" });
+	it.each([
+		[{ status: "succeeded", finalText: "the final answer is 42" }, "the final answer is 42"],
+		[{ status: "succeeded" }, ""],
+		[{ status: "failed", errorMessage: "Pi exited with code 1" }, "Pi exited with code 1"],
+		[{ status: "failed" }, "subagent failed"],
+		[{ status: "aborted" }, "subagent aborted"],
+	] as const)("buildResult(%j): content === %j, details === snapshot", (status, text) => {
+		const snapshot = makeSubagentSnapshot(status);
 		const result = buildResult(snapshot);
 		expect(result.details).toBe(snapshot);
-		expect(result.content).toHaveLength(1);
-	});
-
-	it("succeeded returns finalText verbatim, including empty", () => {
-		expect(
-			buildResult(makeSubagentSnapshot({ status: "succeeded", finalText: "the final answer is 42" })).content,
-		).toEqual([{ type: "text", text: "the final answer is 42" }]);
-		expect(buildResult(makeSubagentSnapshot({ status: "succeeded" })).content).toEqual([{ type: "text", text: "" }]);
-	});
-
-	it("failed returns errorMessage, or a default if missing", () => {
-		expect(
-			buildResult(makeSubagentSnapshot({ status: "failed", errorMessage: "Pi exited with code 1" })).content,
-		).toEqual([{ type: "text", text: "Pi exited with code 1" }]);
-		expect(buildResult(makeSubagentSnapshot({ status: "failed" })).content).toEqual([
-			{ type: "text", text: "subagent failed" },
-		]);
-	});
-
-	it("aborted returns 'subagent aborted'", () => {
-		expect(buildResult(makeSubagentSnapshot({ status: "aborted" })).content).toEqual([
-			{ type: "text", text: "subagent aborted" },
-		]);
+		expect(result.content).toEqual([{ type: "text", text }]);
 	});
 });

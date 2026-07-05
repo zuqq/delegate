@@ -142,7 +142,7 @@ function formatTrailLines(
 	expanded: boolean,
 	theme: MinimalTheme,
 	home: string,
-	expandHint: string | undefined,
+	expandHint: string,
 ): string[] {
 	if (trail.length === 0) return [];
 	const lines: string[] = [];
@@ -150,11 +150,7 @@ function formatTrailLines(
 	if (!expanded && trail.length > TRAIL_DISPLAY_LIMIT) {
 		const earlier = trail.length - TRAIL_DISPLAY_LIMIT;
 		const noun = `tool call${earlier === 1 ? "" : "s"}`;
-		lines.push(
-			expandHint
-				? `${theme.fg("muted", `... (${earlier} earlier ${noun},`)} ${expandHint})`
-				: theme.fg("muted", `... (${earlier} earlier ${noun})`),
-		);
+		lines.push(`${theme.fg("muted", `... (${earlier} earlier ${noun},`)} ${expandHint})`);
 		entries = trail.slice(-TRAIL_DISPLAY_LIMIT);
 	}
 	for (const entry of entries) {
@@ -257,7 +253,7 @@ export function renderResult(
 	context: MinimalRenderContext,
 	// Inject `home` and `expandHint` for testing.
 	home: string,
-	expandHint: string | undefined,
+	expandHint: string,
 ): Container {
 	const snapshot = result.details;
 	const state = context.state;

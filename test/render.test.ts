@@ -1,5 +1,5 @@
 import type { ToolRenderResultOptions } from "@earendil-works/pi-coding-agent";
-import { type Component, type Container, visibleWidth } from "@earendil-works/pi-tui";
+import { type Component, visibleWidth } from "@earendil-works/pi-tui";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SubagentSnapshot } from "../src/events.ts";
 import { buildResult } from "../src/index.ts";
@@ -19,6 +19,8 @@ import { PARAMS } from "./fixtures.ts";
 const USAGE = { contextTokens: 200, cost: 0.02 };
 
 const HOME = "/home/user";
+
+const EXPAND_HINT = "ctrl+o to expand";
 
 const collapsed: ToolRenderResultOptions = { expanded: false, isPartial: false };
 const expanded: ToolRenderResultOptions = { expanded: true, isPartial: false };
@@ -52,14 +54,6 @@ function renderComponent(c: Component, width: number): string {
 	return c.render(width).map(stripAnsiCsi).map(stripTrailingSpaces).join("\n");
 }
 
-function renderContainer(c: Container, width: number): string {
-	return c.children
-		.flatMap((child) => child.render(width))
-		.map(stripAnsiCsi)
-		.map(stripTrailingSpaces)
-		.join("\n");
-}
-
 // The footer uses `Date.now()`.
 beforeEach(() => {
 	vi.useFakeTimers();
@@ -70,14 +64,12 @@ afterEach(() => {
 });
 
 describe("renderCall", () => {
-	it("with description", () => {
-		const c = renderCall({ description: "recon" }, plain, makeContext({}));
-		expect(renderComponent(c, 80)).toMatchInlineSnapshot(`"subagent recon"`);
-	});
-
-	it("description not yet streamed", () => {
-		const c = renderCall({}, plain, makeContext({}));
-		expect(renderComponent(c, 80)).toMatchInlineSnapshot(`"subagent ..."`);
+	it.each([
+		[{ description: "recon" }, "subagent recon"],
+		[{}, "subagent ..."],
+	] as const)("renderCall(%j) === %s", (args, expected) => {
+		const c = renderCall(args, plain, makeContext({}));
+		expect(renderComponent(c, 80)).toBe(expected);
 	});
 });
 
@@ -98,7 +90,10 @@ describe("renderResult", () => {
 			trail: [],
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), collapsed, plain, makeContext({}), HOME, undefined), 80),
+			renderComponent(
+				renderResult(buildResult(snapshot), collapsedPartial, plain, makeContext({}), HOME, EXPAND_HINT),
+				80,
+			),
 		).toMatchInlineSnapshot(`""`);
 	});
 
@@ -111,7 +106,10 @@ describe("renderResult", () => {
 			trail: [],
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), collapsed, plain, makeContext({}), HOME, undefined), 80),
+			renderComponent(
+				renderResult(buildResult(snapshot), collapsedPartial, plain, makeContext({}), HOME, EXPAND_HINT),
+				80,
+			),
 		).toMatchInlineSnapshot(`
 			"
 			test-model, 200 context tokens, $0.02"
@@ -128,7 +126,7 @@ describe("renderResult", () => {
 			finalText: "the final answer is 42",
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), collapsed, plain, makeContext({}), HOME, undefined), 80),
+			renderComponent(renderResult(buildResult(snapshot), collapsed, plain, makeContext({}), HOME, EXPAND_HINT), 80),
 		).toMatchInlineSnapshot(`
 			"
 			$ cargo check
@@ -148,7 +146,7 @@ describe("renderResult", () => {
 			trail: trail.slice(0, 2),
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), collapsed, plain, makeContext({}), HOME, undefined), 80),
+			renderComponent(renderResult(buildResult(snapshot), collapsed, plain, makeContext({}), HOME, EXPAND_HINT), 80),
 		).toMatchInlineSnapshot(`
 			"
 			$ cargo check
@@ -170,7 +168,7 @@ describe("renderResult", () => {
 			trail: trail.slice(0, 2),
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), collapsed, plain, makeContext({}), HOME, undefined), 80),
+			renderComponent(renderResult(buildResult(snapshot), collapsed, plain, makeContext({}), HOME, EXPAND_HINT), 80),
 		).toMatchInlineSnapshot(`
 			"
 			$ cargo check
@@ -182,7 +180,7 @@ describe("renderResult", () => {
 		`);
 	});
 
-	it("collapsed, > TRAIL_DISPLAY_LIMIT entries", () => {
+	it("collapsed, 2 trail entries past `TRAIL_DISPLAY_LIMIT`", () => {
 		const many = [
 			{ name: "bash", args: { command: "first" } },
 			{ name: "bash", args: { command: "second" } },
@@ -197,10 +195,13 @@ describe("renderResult", () => {
 			trail: many,
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), collapsed, plain, makeContext({}), HOME, undefined), 80),
+			renderComponent(
+				renderResult(buildResult(snapshot), collapsedPartial, plain, makeContext({}), HOME, EXPAND_HINT),
+				80,
+			),
 		).toMatchInlineSnapshot(`
 			"
-			... (2 earlier tool calls)
+			... (2 earlier tool calls, ctrl+o to expand)
 			$ cargo check
 			read /x.ts
 			edit /y.ts
@@ -210,7 +211,7 @@ describe("renderResult", () => {
 		`);
 	});
 
-	it("collapsed, 1 earlier tool call (singular)", () => {
+	it("collapsed, 1 trail entry past `TRAIL_DISPLAY_LIMIT` (singular label)", () => {
 		const many = [
 			{ name: "bash", args: { command: "first" } },
 			...trail,
@@ -224,10 +225,13 @@ describe("renderResult", () => {
 			trail: many,
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), collapsed, plain, makeContext({}), HOME, undefined), 80),
+			renderComponent(
+				renderResult(buildResult(snapshot), collapsedPartial, plain, makeContext({}), HOME, EXPAND_HINT),
+				80,
+			),
 		).toMatchInlineSnapshot(`
 			"
-			... (1 earlier tool call)
+			... (1 earlier tool call, ctrl+o to expand)
 			$ cargo check
 			read /x.ts
 			edit /y.ts
@@ -252,7 +256,10 @@ describe("renderResult", () => {
 			],
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), collapsed, plain, makeContext({}), HOME, undefined), 80),
+			renderComponent(
+				renderResult(buildResult(snapshot), collapsedPartial, plain, makeContext({}), HOME, EXPAND_HINT),
+				80,
+			),
 		).toMatchInlineSnapshot(`
 			"
 			$ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa...
@@ -261,7 +268,7 @@ describe("renderResult", () => {
 		`);
 	});
 
-	it("collapsed, multi-line bash command", () => {
+	it("collapsed, multi-line `bash` command", () => {
 		const cmd = "cd /a && python3 -c \"\n\tdata = open('x').read()\n\"";
 		const snapshot: SubagentSnapshot = {
 			...PARAMS,
@@ -272,14 +279,17 @@ describe("renderResult", () => {
 			trail: [{ name: "bash", args: { command: cmd } }],
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), collapsed, plain, makeContext({}), HOME, undefined), 120),
+			renderComponent(
+				renderResult(buildResult(snapshot), collapsedPartial, plain, makeContext({}), HOME, EXPAND_HINT),
+				80,
+			),
 		).toMatchInlineSnapshot(`
 			"
 			$ cd /a && python3 -c "⏎⇥data = open('x').read()⏎""
 		`);
 	});
 
-	it("expanded, multi-line bash command", () => {
+	it("expanded, multi-line `bash` command", () => {
 		const cmd = 'python3 -c "\n\tprint(1)\n"';
 		const snapshot: SubagentSnapshot = {
 			...PARAMS,
@@ -290,7 +300,10 @@ describe("renderResult", () => {
 			trail: [{ name: "bash", args: { command: cmd } }],
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), expanded, plain, makeContext({}), HOME, undefined), 120),
+			renderComponent(
+				renderResult(buildResult(snapshot), expandedPartial, plain, makeContext({}), HOME, EXPAND_HINT),
+				80,
+			),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -314,7 +327,7 @@ describe("renderResult", () => {
 			trail: [],
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), collapsed, plain, makeContext({}), HOME, undefined), 80),
+			renderComponent(renderResult(buildResult(snapshot), collapsed, plain, makeContext({}), HOME, EXPAND_HINT), 80),
 		).toMatchInlineSnapshot(`
 			"
 			Pi exited with code 1: eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee..."
@@ -324,7 +337,7 @@ describe("renderResult", () => {
 	const errorMessageWithStackTrace =
 		"Error [ERR_MODULE_NOT_FOUND]: Cannot find module\n\tat finalizeResolution\n\tat moduleResolve";
 
-	it("collapsed, failed status with newlines and tabs", () => {
+	it("collapsed, status row with newlines and tabs", () => {
 		const snapshot: SubagentSnapshot = {
 			...PARAMS,
 			status: "failed",
@@ -335,14 +348,17 @@ describe("renderResult", () => {
 			trail: [],
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), collapsed, plain, makeContext({}), HOME, undefined), 120),
+			renderComponent(
+				renderResult(buildResult(snapshot), collapsed, plain, makeContext({}), HOME, EXPAND_HINT),
+				120,
+			),
 		).toMatchInlineSnapshot(`
 			"
 			Error [ERR_MODULE_NOT_FOUND]: Cannot find module⏎⇥at finalizeResolution⏎⇥at moduleResolve"
 		`);
 	});
 
-	it("expanded, failed status with newlines and tabs", () => {
+	it("expanded, status row with newlines and tabs", () => {
 		const snapshot: SubagentSnapshot = {
 			...PARAMS,
 			status: "failed",
@@ -353,7 +369,7 @@ describe("renderResult", () => {
 			trail: [],
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), expanded, plain, makeContext({}), HOME, undefined), 120),
+			renderComponent(renderResult(buildResult(snapshot), expanded, plain, makeContext({}), HOME, EXPAND_HINT), 80),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -375,14 +391,14 @@ describe("renderResult", () => {
 			trail: [],
 		};
 		expect(
-			renderContainer(
+			renderComponent(
 				renderResult(
 					buildResult(snapshot),
 					collapsed,
 					plain,
 					makeContext({ startedAt: 0, endedAt: 10_000 }),
 					HOME,
-					undefined,
+					EXPAND_HINT,
 				),
 				40,
 			),
@@ -392,7 +408,7 @@ describe("renderResult", () => {
 		`);
 	});
 
-	it("expanded, long bash command", () => {
+	it("expanded, long `bash` command", () => {
 		const long = "x".repeat(200);
 		const snapshot: SubagentSnapshot = {
 			...PARAMS,
@@ -403,7 +419,10 @@ describe("renderResult", () => {
 			trail: [{ name: "bash", args: { command: long } }],
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), expanded, plain, makeContext({}), HOME, undefined), 80),
+			renderComponent(
+				renderResult(buildResult(snapshot), expandedPartial, plain, makeContext({}), HOME, EXPAND_HINT),
+				80,
+			),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -430,8 +449,15 @@ describe("renderResult", () => {
 			],
 		};
 		for (const width of [1, 2, 3, 5]) {
-			const container = renderResult(buildResult(snapshot), expanded, plain, makeContext({}), HOME, undefined);
-			const lines = container.children.flatMap((child) => child.render(width));
+			const container = renderResult(
+				buildResult(snapshot),
+				expandedPartial,
+				plain,
+				makeContext({}),
+				HOME,
+				EXPAND_HINT,
+			);
+			const lines = container.render(width);
 			for (const line of lines) {
 				expect(visibleWidth(line)).toBeLessThanOrEqual(width);
 			}
@@ -454,7 +480,10 @@ describe("renderResult", () => {
 			],
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), expanded, plain, makeContext({}), HOME, undefined), 60),
+			renderComponent(
+				renderResult(buildResult(snapshot), expandedPartial, plain, makeContext({}), HOME, EXPAND_HINT),
+				60,
+			),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -466,7 +495,7 @@ describe("renderResult", () => {
 		`);
 	});
 
-	it("expanded, succeeded with finalText", () => {
+	it("expanded, succeeded with `finalText`", () => {
 		const snapshot: SubagentSnapshot = {
 			...PARAMS,
 			status: "succeeded",
@@ -476,7 +505,7 @@ describe("renderResult", () => {
 			finalText: "# Hello\n\nthe final answer is 42",
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), expanded, plain, makeContext({}), HOME, undefined), 80),
+			renderComponent(renderResult(buildResult(snapshot), expanded, plain, makeContext({}), HOME, EXPAND_HINT), 80),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -495,7 +524,7 @@ describe("renderResult", () => {
 		`);
 	});
 
-	it("expanded, empty finalText", () => {
+	it("expanded, succeeded without `finalText`", () => {
 		const snapshot: SubagentSnapshot = {
 			...PARAMS,
 			status: "succeeded",
@@ -504,7 +533,7 @@ describe("renderResult", () => {
 			trail,
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), expanded, plain, makeContext({}), HOME, undefined), 80),
+			renderComponent(renderResult(buildResult(snapshot), expanded, plain, makeContext({}), HOME, EXPAND_HINT), 80),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -518,7 +547,7 @@ describe("renderResult", () => {
 		`);
 	});
 
-	it("expanded, running with prompt but no trail yet", () => {
+	it("expanded, running with a prompt but no trail yet", () => {
 		const snapshot: SubagentSnapshot = {
 			...PARAMS,
 			status: "running",
@@ -527,7 +556,10 @@ describe("renderResult", () => {
 			trail: [],
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), expanded, plain, makeContext({}), HOME, undefined), 80),
+			renderComponent(
+				renderResult(buildResult(snapshot), expandedPartial, plain, makeContext({}), HOME, EXPAND_HINT),
+				80,
+			),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -537,7 +569,7 @@ describe("renderResult", () => {
 		`);
 	});
 
-	it("expanded, shows all trail entries past TRAIL_DISPLAY_LIMIT", () => {
+	it("expanded, shows all trail entries past `TRAIL_DISPLAY_LIMIT`", () => {
 		const many = [];
 		for (let i = 0; i < 10; i++) many.push({ name: "bash", args: { command: `c${i}` } });
 		const snapshot: SubagentSnapshot = {
@@ -548,7 +580,7 @@ describe("renderResult", () => {
 			trail: many,
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), expanded, plain, makeContext({}), HOME, undefined), 80),
+			renderComponent(renderResult(buildResult(snapshot), expanded, plain, makeContext({}), HOME, EXPAND_HINT), 80),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -578,7 +610,7 @@ describe("renderResult", () => {
 			trail,
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), expanded, plain, makeContext({}), HOME, undefined), 80),
+			renderComponent(renderResult(buildResult(snapshot), expanded, plain, makeContext({}), HOME, EXPAND_HINT), 80),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -594,7 +626,7 @@ describe("renderResult", () => {
 		`);
 	});
 
-	it("expanded, multi-line markdown task", () => {
+	it("expanded, multi-line Markdown `task`", () => {
 		const snapshot: SubagentSnapshot = {
 			...PARAMS,
 			task: "# Task\n\nDo the thing",
@@ -605,7 +637,7 @@ describe("renderResult", () => {
 			finalText: "done",
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), expanded, plain, makeContext({}), HOME, undefined), 80),
+			renderComponent(renderResult(buildResult(snapshot), expanded, plain, makeContext({}), HOME, EXPAND_HINT), 80),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -624,7 +656,7 @@ describe("renderResult", () => {
 		`);
 	});
 
-	it("tool rendering reference", () => {
+	it("expanded, tool call rendering reference", () => {
 		const variants = [
 			{ name: "bash", args: { command: "ls -la" } },
 			{ name: "bash", args: {} },
@@ -650,7 +682,7 @@ describe("renderResult", () => {
 			trail: variants,
 		};
 		expect(
-			renderContainer(renderResult(buildResult(snapshot), expanded, plain, makeContext({}), HOME, undefined), 120),
+			renderComponent(renderResult(buildResult(snapshot), expanded, plain, makeContext({}), HOME, EXPAND_HINT), 80),
 		).toMatchInlineSnapshot(`
 			"
 			Prompt:
@@ -677,7 +709,7 @@ describe("renderResult", () => {
 describe("renderResult: duration footer", () => {
 	const trail = [{ name: "bash", args: { command: "cargo check" } }];
 
-	it("running, with startedAt", () => {
+	it("collapsed, running with `startedAt`", () => {
 		const snapshot: SubagentSnapshot = {
 			...PARAMS,
 			status: "running",
@@ -686,14 +718,14 @@ describe("renderResult: duration footer", () => {
 			trail,
 		};
 		expect(
-			renderContainer(
+			renderComponent(
 				renderResult(
 					buildResult(snapshot),
 					collapsedPartial,
 					plain,
 					makeContext({ startedAt: 6_000 }),
 					HOME,
-					undefined,
+					EXPAND_HINT,
 				),
 				80,
 			),
@@ -705,7 +737,7 @@ describe("renderResult: duration footer", () => {
 		`);
 	});
 
-	it("succeeded, with frozen state", () => {
+	it("collapsed, succeeded with `startedAt` and `endedAt`", () => {
 		const snapshot: SubagentSnapshot = {
 			...PARAMS,
 			status: "succeeded",
@@ -714,14 +746,14 @@ describe("renderResult: duration footer", () => {
 			trail,
 		};
 		expect(
-			renderContainer(
+			renderComponent(
 				renderResult(
 					buildResult(snapshot),
 					collapsed,
 					plain,
 					makeContext({ startedAt: 1_000, endedAt: 11_000 }),
 					HOME,
-					undefined,
+					EXPAND_HINT,
 				),
 				80,
 			),
@@ -733,7 +765,7 @@ describe("renderResult: duration footer", () => {
 		`);
 	});
 
-	it("failed, terminal frame", () => {
+	it("collapsed, failed with `startedAt` and `endedAt`", () => {
 		const snapshot: SubagentSnapshot = {
 			...PARAMS,
 			status: "failed",
@@ -743,14 +775,14 @@ describe("renderResult: duration footer", () => {
 			trail,
 		};
 		expect(
-			renderContainer(
+			renderComponent(
 				renderResult(
 					buildResult(snapshot),
 					collapsed,
 					plain,
 					makeContext({ startedAt: 0, endedAt: 10_000 }),
 					HOME,
-					undefined,
+					EXPAND_HINT,
 				),
 				80,
 			),
@@ -764,7 +796,7 @@ describe("renderResult: duration footer", () => {
 		`);
 	});
 
-	it("running, no startedAt", () => {
+	it("collapsed, running without `startedAt`", () => {
 		const snapshot: SubagentSnapshot = {
 			...PARAMS,
 			status: "running",
@@ -773,8 +805,8 @@ describe("renderResult: duration footer", () => {
 			trail,
 		};
 		expect(
-			renderContainer(
-				renderResult(buildResult(snapshot), collapsedPartial, plain, makeContext({}), HOME, undefined),
+			renderComponent(
+				renderResult(buildResult(snapshot), collapsedPartial, plain, makeContext({}), HOME, EXPAND_HINT),
 				80,
 			),
 		).toMatchInlineSnapshot(`
@@ -785,7 +817,7 @@ describe("renderResult: duration footer", () => {
 		`);
 	});
 
-	it("expanded, running with startedAt", () => {
+	it("expanded, running with `startedAt`", () => {
 		const snapshot: SubagentSnapshot = {
 			...PARAMS,
 			status: "running",
@@ -798,14 +830,14 @@ describe("renderResult: duration footer", () => {
 			],
 		};
 		expect(
-			renderContainer(
+			renderComponent(
 				renderResult(
 					buildResult(snapshot),
 					expandedPartial,
 					plain,
 					makeContext({ startedAt: 6_000 }),
 					HOME,
-					undefined,
+					EXPAND_HINT,
 				),
 				80,
 			),
@@ -822,7 +854,7 @@ describe("renderResult: duration footer", () => {
 		`);
 	});
 
-	it("expanded, long footer row wraps", () => {
+	it("expanded, long footer row", () => {
 		const snapshot: SubagentSnapshot = {
 			...PARAMS,
 			status: "running",
@@ -832,8 +864,15 @@ describe("renderResult: duration footer", () => {
 			trail: [],
 		};
 		expect(
-			renderContainer(
-				renderResult(buildResult(snapshot), expandedPartial, plain, makeContext({ startedAt: 0 }), HOME, undefined),
+			renderComponent(
+				renderResult(
+					buildResult(snapshot),
+					expandedPartial,
+					plain,
+					makeContext({ startedAt: 0 }),
+					HOME,
+					EXPAND_HINT,
+				),
 				40,
 			),
 		).toMatchInlineSnapshot(`
@@ -847,7 +886,7 @@ describe("renderResult: duration footer", () => {
 		`);
 	});
 
-	it("running, only startedAt, no usage/model", () => {
+	it("collapsed, running with only `startedAt`", () => {
 		const snapshot: SubagentSnapshot = {
 			...PARAMS,
 			status: "running",
@@ -857,14 +896,14 @@ describe("renderResult: duration footer", () => {
 			trail: [],
 		};
 		expect(
-			renderContainer(
+			renderComponent(
 				renderResult(
 					buildResult(snapshot),
 					collapsedPartial,
 					plain,
 					makeContext({ startedAt: 9_000 }),
 					HOME,
-					undefined,
+					EXPAND_HINT,
 				),
 				80,
 			),
