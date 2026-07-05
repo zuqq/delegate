@@ -180,6 +180,43 @@ describe("renderResult", () => {
 		`);
 	});
 
+	it("collapsed, failed without `errorMessage`", () => {
+		const snapshot: SubagentSnapshot = {
+			...PARAMS,
+			status: "failed",
+			...USAGE,
+			model: "test-model",
+			trail: trail.slice(0, 1),
+		};
+		expect(
+			renderComponent(renderResult(buildResult(snapshot), collapsed, plain, makeContext({}), HOME, EXPAND_HINT), 80),
+		).toMatchInlineSnapshot(`
+			"
+			$ cargo check
+
+			Operation failed
+
+			test-model, 200 context tokens, $0.02"
+		`);
+	});
+
+	it("collapsed, succeeded with 1 context token (singular)", () => {
+		const snapshot: SubagentSnapshot = {
+			...PARAMS,
+			status: "succeeded",
+			contextTokens: 1,
+			cost: 0.02,
+			model: "test-model",
+			trail: [],
+		};
+		expect(
+			renderComponent(renderResult(buildResult(snapshot), collapsed, plain, makeContext({}), HOME, EXPAND_HINT), 80),
+		).toMatchInlineSnapshot(`
+			"
+			test-model, 1 context token, $0.02"
+		`);
+	});
+
 	it("collapsed, 2 trail entries past `TRAIL_DISPLAY_LIMIT`", () => {
 		const many = [
 			{ name: "bash", args: { command: "first" } },
@@ -662,13 +699,19 @@ describe("renderResult", () => {
 			{ name: "bash", args: {} },
 			{ name: "read", args: { path: "/x.ts" } },
 			{ name: "read", args: { path: `${HOME}/src/foo.ts` } },
+			{ name: "read", args: { file_path: "/fp.ts" } },
 			{ name: "write", args: { path: "/x.ts" } },
+			{ name: "write", args: { file_path: "/fp.ts" } },
 			{ name: "edit", args: { path: "/y.ts" } },
+			{ name: "edit", args: { file_path: "/fp.ts" } },
 			{ name: "ls", args: {} },
 			{ name: "ls", args: { path: "/etc" } },
+			{ name: "ls", args: { file_path: "/fp" } },
 			{ name: "find", args: { pattern: "*.ts", path: "src" } },
+			{ name: "find", args: { pattern: "*.ts", file_path: "/fp" } },
 			{ name: "find", args: {} },
 			{ name: "grep", args: { pattern: "TODO", path: "src" } },
+			{ name: "grep", args: { pattern: "TODO", file_path: "/fp" } },
 			{ name: "subagent", args: { description: "recon" } },
 			{ name: "subagent", args: {} },
 			{ name: "custom_tool", args: { foo: 1, bar: "x" } },
@@ -692,13 +735,19 @@ describe("renderResult", () => {
 			$ ...
 			read /x.ts
 			read ~/src/foo.ts
+			read /fp.ts
 			write /x.ts
+			write /fp.ts
 			edit /y.ts
+			edit /fp.ts
 			ls .
 			ls /etc
+			ls /fp
 			find *.ts in src
+			find *.ts in /fp
 			find * in .
 			grep /TODO/ in src
+			grep /TODO/ in /fp
 			subagent recon
 			subagent ...
 			custom_tool {"foo":1,"bar":"x"}"

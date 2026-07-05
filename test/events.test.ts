@@ -16,6 +16,7 @@ describe("parseEvent", () => {
 		["null"],
 		['{"type":"message_update"}'],
 		['{"type":"tool_execution_end"}'],
+		['{"type":"tool_execution_start"}'],
 		['{"type":"message_end","message":{"role":"user"}}'],
 	] as const)("parseEvent(%j) === undefined", (line) => {
 		expect(parseEvent(line)).toBeUndefined();
@@ -39,6 +40,27 @@ describe("parseEvent", () => {
 			},
 		});
 		expect(parseEvent(line)).toEqual({ type: "message_end", finalText: "Hello world." });
+	});
+
+	it("extracts usage, `model`, `stopReason`, and `errorMessage` from `message_end`", () => {
+		const line = JSON.stringify({
+			type: "message_end",
+			message: {
+				role: "assistant",
+				usage: { totalTokens: 200, cost: { total: 0.02 } },
+				model: "m",
+				stopReason: "error",
+				errorMessage: "provider 500",
+			},
+		});
+		expect(parseEvent(line)).toEqual({
+			type: "message_end",
+			contextTokens: 200,
+			cost: 0.02,
+			model: "m",
+			stopReason: "error",
+			errorMessage: "provider 500",
+		});
 	});
 });
 
@@ -69,6 +91,29 @@ describe("updateSubagentState", () => {
 		});
 		expect(s).toMatchObject({ model: "m", stopReason: "stop", errorMessage: "oops", finalText: "hi" });
 	});
+
+	it("does not clobber recorded fields with a sparse `message_end`", () => {
+		const s = emptySubagentState();
+		updateSubagentState(s, {
+			type: "message_end",
+			contextTokens: 100,
+			cost: 0.01,
+			model: "m",
+			stopReason: "stop",
+			errorMessage: "oops",
+			finalText: "hi",
+		});
+		updateSubagentState(s, { type: "message_end" });
+		expect(s).toEqual({
+			trail: [],
+			contextTokens: 100,
+			cost: 0.01,
+			model: "m",
+			stopReason: "stop",
+			errorMessage: "oops",
+			finalText: "hi",
+		});
+	});
 });
 
 describe("finalizeSubagentState", () => {
@@ -80,6 +125,12 @@ describe("finalizeSubagentState", () => {
 	it("returns `failed` on a non-zero exit code, with a generic message", () => {
 		const d = finalizeSubagentState(PARAMS, emptySubagentState(), { type: "exit", code: 7, stderr: "" });
 		expect(d).toMatchObject({ status: "failed", errorMessage: "Pi exited with code 7" });
+	});
+
+	it("returns `failed` when `stopReason` is `aborted`, even on a clean exit", () => {
+		const s = { ...emptySubagentState(), stopReason: "aborted" };
+		const d = finalizeSubagentState(PARAMS, s, { type: "exit", code: 0, stderr: "" });
+		expect(d).toMatchObject({ status: "failed", errorMessage: "Pi exited with code 0" });
 	});
 
 	it("returns `failed` when `stopReason` is `error`, preferring the recorded `errorMessage` over `stderr`", () => {
@@ -102,13 +153,17 @@ describe("finalizeSubagentState", () => {
 		const d = finalizeSubagentState(PARAMS, emptySubagentState(), { type: "spawnError", message: "ENOENT: pi" });
 		expect(d).toMatchObject({ status: "failed", errorMessage: "ENOENT: pi" });
 	});
-
 });
 
 describe("snapshotSubagentState", () => {
-	it("preserves `finalText` on `succeeded`", () => {
+	it.each([
+		["succeeded", "the final answer is 42"],
+		["running", undefined],
+		["failed", undefined],
+		["aborted", undefined],
+	] as const)("snapshotSubagentState(%j): finalText === %j", (status, finalText) => {
 		const s = { ...emptySubagentState(), finalText: "the final answer is 42" };
-		expect(snapshotSubagentState(PARAMS, s, "succeeded")).toMatchObject({ finalText: "the final answer is 42" });
+		expect(snapshotSubagentState(PARAMS, s, status)).toMatchObject({ finalText });
 	});
 
 	it("copies usage, `model`, and the trail from the state", () => {

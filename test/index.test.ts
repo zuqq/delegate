@@ -24,6 +24,7 @@ describe("handleToolResult", () => {
 
 describe("buildResult", () => {
 	it.each([
+		[{ status: "running" }, ""],
 		[{ status: "succeeded", finalText: "the final answer is 42" }, "the final answer is 42"],
 		[{ status: "succeeded" }, ""],
 		[{ status: "failed", errorMessage: "Pi exited with code 1" }, "Pi exited with code 1"],
