@@ -123,8 +123,7 @@ function formatToolCall(name: string, args: Record<string, unknown>, theme: Mini
 				theme.fg("dim", ` in ${tildify((args.file_path || args.path || ".") as string, home)}`)
 			);
 		case "subagent": {
-			const description = (args.description as string) || "...";
-			return theme.fg("muted", "subagent ") + theme.fg("accent", description);
+			return theme.fg("muted", "subagent ") + theme.fg("accent", (args.description as string) || "...");
 		}
 		default:
 			return theme.fg("accent", name) + theme.fg("dim", ` ${JSON.stringify(args)}`);
