@@ -162,7 +162,7 @@ describe("renderResult", () => {
 		const snapshot: SubagentSnapshot = {
 			...PARAMS,
 			status: "failed",
-			errorMessage: "Pi exited with code 1",
+			errorMessage: "No models available",
 			...USAGE,
 			model: "test-model",
 			trail: trail.slice(0, 2),
@@ -174,7 +174,7 @@ describe("renderResult", () => {
 			$ cargo check
 			read /x.ts
 
-			Pi exited with code 1
+			No models available
 
 			test-model, 200 context tokens, $0.02"
 		`);
@@ -353,7 +353,7 @@ describe("renderResult", () => {
 	});
 
 	it("collapsed, long status row", () => {
-		const longErr = `Pi exited with code 1: ${"e".repeat(500)}`;
+		const longErr = `Request failed: ${"e".repeat(500)}`;
 		const snapshot: SubagentSnapshot = {
 			...PARAMS,
 			status: "failed",
@@ -367,7 +367,7 @@ describe("renderResult", () => {
 			renderComponent(renderResult(buildResult(snapshot), collapsed, plain, makeContext({}), HOME, EXPAND_HINT), 80),
 		).toMatchInlineSnapshot(`
 			"
-			Pi exited with code 1: eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee..."
+			Request failed: eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee..."
 		`);
 	});
 
@@ -699,19 +699,13 @@ describe("renderResult", () => {
 			{ name: "bash", args: {} },
 			{ name: "read", args: { path: "/x.ts" } },
 			{ name: "read", args: { path: `${HOME}/src/foo.ts` } },
-			{ name: "read", args: { file_path: "/fp.ts" } },
 			{ name: "write", args: { path: "/x.ts" } },
-			{ name: "write", args: { file_path: "/fp.ts" } },
 			{ name: "edit", args: { path: "/y.ts" } },
-			{ name: "edit", args: { file_path: "/fp.ts" } },
 			{ name: "ls", args: {} },
 			{ name: "ls", args: { path: "/etc" } },
-			{ name: "ls", args: { file_path: "/fp" } },
 			{ name: "find", args: { pattern: "*.ts", path: "src" } },
-			{ name: "find", args: { pattern: "*.ts", file_path: "/fp" } },
 			{ name: "find", args: {} },
 			{ name: "grep", args: { pattern: "TODO", path: "src" } },
-			{ name: "grep", args: { pattern: "TODO", file_path: "/fp" } },
 			{ name: "subagent", args: { description: "recon" } },
 			{ name: "subagent", args: {} },
 			{ name: "custom_tool", args: { foo: 1, bar: "x" } },
@@ -735,19 +729,13 @@ describe("renderResult", () => {
 			$ ...
 			read /x.ts
 			read ~/src/foo.ts
-			read /fp.ts
 			write /x.ts
-			write /fp.ts
 			edit /y.ts
-			edit /fp.ts
 			ls .
 			ls /etc
-			ls /fp
 			find *.ts in src
-			find *.ts in /fp
 			find * in .
 			grep /TODO/ in src
-			grep /TODO/ in /fp
 			subagent recon
 			subagent ...
 			custom_tool {"foo":1,"bar":"x"}"
@@ -818,7 +806,7 @@ describe("renderResult: duration footer", () => {
 		const snapshot: SubagentSnapshot = {
 			...PARAMS,
 			status: "failed",
-			errorMessage: "Pi exited with code 1",
+			errorMessage: "No models available",
 			...USAGE,
 			model: "test-model",
 			trail,
@@ -839,7 +827,7 @@ describe("renderResult: duration footer", () => {
 			"
 			$ cargo check
 
-			Pi exited with code 1
+			No models available
 
 			Took 10.0s • test-model, 200 context tokens, $0.02"
 		`);

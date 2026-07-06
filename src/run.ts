@@ -1,17 +1,14 @@
-import { spawn } from "node:child_process";
-import { createInterface } from "node:readline";
+import { formatThrownValue } from "@earendil-works/pi-ai";
+import { type AgentSession, createAgentSession, SessionManager } from "@earendil-works/pi-coding-agent";
 import {
 	emptySubagentState,
 	finalizeSubagentState,
-	parseEvent,
+	isSubagentEvent,
 	type SubagentSnapshot,
-	type SubagentTermination,
 	snapshotSubagentState,
 	updateSubagentState,
 } from "./events.ts";
 import type { Params } from "./schema.ts";
-
-const SIGKILL_GRACE_MS = 5_000;
 
 export async function runSubagent(
 	params: Params,
@@ -19,52 +16,34 @@ export async function runSubagent(
 	signal: AbortSignal | undefined,
 	onUpdate: (snapshot: SubagentSnapshot) => void,
 ): Promise<SubagentSnapshot> {
-	const script = process.argv[1];
-	const piArgs = ["--mode", "json", "-p", "--no-session", params.task];
-	// Bun's `--compile` standalone sets `argv[1]` to a `/$bunfs/root/...`
-	// virtual path; spawn `execPath` directly in that case.
-	const args = script.startsWith("/$bunfs/root/") ? piArgs : [script, ...piArgs];
-	const proc = spawn(process.execPath, args, {
-		cwd,
-		stdio: ["ignore", "pipe", "pipe"],
-	});
-	const stdout = proc.stdout;
-	const stderr = proc.stderr;
-
-	let stderrText = "";
-	stderr.setEncoding("utf8");
-	stderr.on("data", (chunk: string) => {
-		stderrText += chunk;
-	});
-
-	let aborted = false;
-	const onAbort = () => {
-		aborted = true;
-		proc.kill("SIGTERM");
-		setTimeout(() => {
-			if (proc.exitCode === null && !proc.killed) proc.kill("SIGKILL");
-		}, SIGKILL_GRACE_MS).unref();
-	};
-	if (signal?.aborted) onAbort();
-	else signal?.addEventListener("abort", onAbort, { once: true });
-
 	const state = emptySubagentState();
-	createInterface({ input: stdout }).on("line", (line) => {
-		const event = parseEvent(line);
-		if (!event) return;
-		updateSubagentState(state, event);
-		onUpdate(snapshotSubagentState(params, state, "running"));
-	});
+	// Update immediately so the renderer shows something before the
+	// child emits.
+	onUpdate(snapshotSubagentState(params, state, "running"));
+	if (signal?.aborted) return finalizeSubagentState(params, state, { type: "aborted" });
 
-	const termination = await new Promise<SubagentTermination>((resolve) => {
-		proc.once("close", (code) => {
-			resolve(aborted ? { type: "aborted" } : { type: "exit", code, stderr: stderrText });
+	let session: AgentSession | undefined;
+	const onAbort = () => {
+		void session?.abort();
+	};
+	signal?.addEventListener("abort", onAbort, { once: true });
+
+	try {
+		({ session } = await createAgentSession({ cwd, sessionManager: SessionManager.inMemory(cwd) }));
+		session.subscribe((event) => {
+			if (!isSubagentEvent(event)) return;
+			updateSubagentState(state, event);
+			onUpdate(snapshotSubagentState(params, state, "running"));
 		});
-		proc.once("error", (err) => {
-			resolve(aborted ? { type: "aborted" } : { type: "spawnError", message: err.message });
-		});
-	});
-	// `signal` may be shared across tool calls; detach our listener.
-	signal?.removeEventListener("abort", onAbort);
-	return finalizeSubagentState(params, state, termination);
+		if (!signal?.aborted) await session.prompt(params.task);
+		state.finalText = session.getLastAssistantText();
+		return finalizeSubagentState(params, state, signal?.aborted ? { type: "aborted" } : { type: "completed" });
+	} catch (err) {
+		if (signal?.aborted) return finalizeSubagentState(params, state, { type: "aborted" });
+		return finalizeSubagentState(params, state, { type: "error", message: formatThrownValue(err) });
+	} finally {
+		// `signal` may be shared across tool calls; detach our listener.
+		signal?.removeEventListener("abort", onAbort);
+		session?.dispose();
+	}
 }

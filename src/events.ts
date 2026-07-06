@@ -1,3 +1,5 @@
+import type { AssistantMessage, StopReason } from "@earendil-works/pi-ai";
+import { type AgentSessionEvent, calculateContextTokens } from "@earendil-works/pi-coding-agent";
 import type { Params } from "./schema.ts";
 
 export interface ToolCallTrailEntry {
@@ -21,7 +23,7 @@ export type SubagentStatus =
 export type SubagentSnapshot = Params & SubagentTrace & SubagentStatus;
 
 export interface SubagentState extends SubagentTrace {
-	stopReason?: string;
+	stopReason?: StopReason;
 	errorMessage?: string;
 	finalText?: string;
 }
@@ -30,111 +32,29 @@ export function emptySubagentState(): SubagentState {
 	return { trail: [], contextTokens: 0, cost: 0, model: undefined };
 }
 
-interface ToolExecutionStartEvent {
-	type: "tool_execution_start";
-	toolName: string;
-	args: Record<string, unknown>;
+export type SubagentEvent =
+	| Extract<AgentSessionEvent, { type: "tool_execution_start" }>
+	| { type: "message_end"; message: AssistantMessage };
+
+export function isSubagentEvent(event: AgentSessionEvent): event is SubagentEvent {
+	return event.type === "tool_execution_start" || (event.type === "message_end" && event.message.role === "assistant");
 }
 
-interface MessageEndEvent {
-	type: "message_end";
-	contextTokens?: number;
-	cost?: number;
-	model?: string;
-	stopReason?: string;
-	errorMessage?: string;
-	finalText?: string;
-}
-
-type Event = ToolExecutionStartEvent | MessageEndEvent;
-
-interface RawEvent {
-	type?: string;
-	toolName?: string;
-	args?: Record<string, unknown>;
-	message?: RawMessage;
-}
-
-interface RawMessage {
-	role?: string;
-	usage?: { cost?: { total?: number }; totalTokens?: number };
-	model?: string;
-	stopReason?: string;
-	errorMessage?: string;
-	content?: RawContent[];
-}
-
-interface RawContent {
-	type?: string;
-	text?: string;
-}
-
-export function parseEvent(line: string): Event | undefined {
-	let raw: RawEvent | null;
-	try {
-		raw = JSON.parse(line);
-	} catch {
-		return undefined;
-	}
-	if (raw === null) return undefined;
-	if (raw.type === "tool_execution_start") return parseToolExecutionStart(raw);
-	if (raw.type === "message_end") return parseMessageEnd(raw);
-	return undefined;
-}
-
-function parseToolExecutionStart(raw: RawEvent): ToolExecutionStartEvent | undefined {
-	if (!raw.toolName) return undefined;
-	return {
-		type: "tool_execution_start",
-		toolName: raw.toolName,
-		args: raw.args ?? {},
-	};
-}
-
-function parseMessageEnd(raw: RawEvent): MessageEndEvent | undefined {
-	const message = raw.message;
-	if (message?.role !== "assistant") return undefined;
-
-	const event: MessageEndEvent = { type: "message_end" };
-
-	const totalTokens = message.usage?.totalTokens;
-	if (Number.isFinite(totalTokens)) event.contextTokens = totalTokens;
-
-	const total = message.usage?.cost?.total;
-	if (Number.isFinite(total)) event.cost = total;
-
-	if (message.model) event.model = message.model;
-	if (message.stopReason) event.stopReason = message.stopReason;
-	if (message.errorMessage) event.errorMessage = message.errorMessage;
-	if (message.content) event.finalText = extractAssistantMessageText(message.content);
-
-	return event;
-}
-
-function extractAssistantMessageText(content: RawContent[]): string | undefined {
-	let text = "";
-	for (const part of content) {
-		if (part.type === "text" && typeof part.text === "string") {
-			text += part.text;
-		}
-	}
-	return text.trim() || undefined;
-}
-
-export function updateSubagentState(state: SubagentState, event: Event): void {
+export function updateSubagentState(state: SubagentState, event: SubagentEvent): void {
 	switch (event.type) {
 		case "tool_execution_start":
 			state.trail.push({ name: event.toolName, args: event.args });
 			return;
-		case "message_end":
+		case "message_end": {
+			const message = event.message;
 			// `contextTokens` is a snapshot, not a delta.
-			if (event.contextTokens !== undefined) state.contextTokens = event.contextTokens;
-			if (event.cost !== undefined) state.cost += event.cost;
-			if (event.model) state.model = event.model;
-			if (event.stopReason) state.stopReason = event.stopReason;
-			if (event.errorMessage) state.errorMessage = event.errorMessage;
-			if (event.finalText) state.finalText = event.finalText;
+			state.contextTokens = calculateContextTokens(message.usage);
+			state.cost += message.usage.cost.total;
+			state.model = message.model;
+			state.stopReason = message.stopReason;
+			if (message.errorMessage) state.errorMessage = message.errorMessage;
 			return;
+		}
 	}
 }
 
@@ -158,10 +78,7 @@ export function snapshotSubagentState(
 	};
 }
 
-export type SubagentTermination =
-	| { type: "exit"; code: number | null; stderr: string }
-	| { type: "aborted" }
-	| { type: "spawnError"; message: string };
+type SubagentTermination = { type: "completed" } | { type: "aborted" } | { type: "error"; message: string };
 
 export function finalizeSubagentState(
 	params: Params,
@@ -169,17 +86,19 @@ export function finalizeSubagentState(
 	termination: SubagentTermination,
 ): SubagentSnapshot {
 	switch (termination.type) {
-		case "exit": {
-			const { code, stderr } = termination;
-			if (code !== 0 || state.stopReason === "error" || state.stopReason === "aborted") {
-				const message = state.errorMessage ?? (stderr.trim() || `Pi exited with code ${code ?? "(null)"}`);
+		case "completed": {
+			if (state.stopReason === "aborted") {
+				return snapshotSubagentState(params, state, "aborted");
+			}
+			if (state.stopReason === "error") {
+				const message = state.errorMessage ?? 'Pi stopped with stopReason "error"';
 				return snapshotSubagentState(params, state, "failed", message);
 			}
 			return snapshotSubagentState(params, state, "succeeded");
 		}
 		case "aborted":
 			return snapshotSubagentState(params, state, "aborted");
-		case "spawnError":
+		case "error":
 			return snapshotSubagentState(params, state, "failed", termination.message);
 	}
 }

@@ -5,7 +5,7 @@ import {
 	keyHint,
 	type ToolResultEvent,
 } from "@earendil-works/pi-coding-agent";
-import { emptySubagentState, type SubagentSnapshot, snapshotSubagentState } from "./events.ts";
+import type { SubagentSnapshot } from "./events.ts";
 import { renderCall, renderResult, type SubagentRenderState } from "./render.ts";
 import { runSubagent } from "./run.ts";
 import { ParamsSchema } from "./schema.ts";
@@ -52,11 +52,6 @@ export default function (pi: ExtensionAPI): void {
 		renderResult: (result, options, theme, context) =>
 			renderResult(result, options, theme, context, os.homedir(), keyHint("app.tools.expand", "to expand")),
 		async execute(_toolCallId, params, signal, onUpdate, ctx) {
-			const initial = snapshotSubagentState(params, emptySubagentState(), "running");
-			// Update immediately so the renderer shows something before the
-			// child emits.
-			onUpdate?.(buildResult(initial));
-
 			const final = await runSubagent(params, ctx.cwd, signal, (live) => {
 				onUpdate?.(buildResult(live));
 			});
