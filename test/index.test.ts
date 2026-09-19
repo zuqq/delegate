@@ -27,7 +27,7 @@ describe("buildResult", () => {
 		[{ status: "running" }, ""],
 		[{ status: "succeeded", finalText: "the final answer is 42" }, "the final answer is 42"],
 		[{ status: "succeeded" }, ""],
-		[{ status: "failed", errorMessage: "Pi exited with code 1" }, "Pi exited with code 1"],
+		[{ status: "failed", errorMessage: "No models available" }, "No models available"],
 		[{ status: "failed" }, "subagent failed"],
 		[{ status: "aborted" }, "subagent aborted"],
 	] as const)("buildResult(%j): content === %j, details === snapshot", (status, text) => {

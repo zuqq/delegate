@@ -1,9 +1,16 @@
 import * as path from "node:path";
 import {
 	type AgentToolResult,
+	type BashToolInput,
+	type EditToolInput,
+	type FindToolInput,
+	type GrepToolInput,
 	getMarkdownTheme,
+	type LsToolInput,
+	type ReadToolInput,
 	type ThemeColor,
 	type ToolRenderResultOptions,
+	type WriteToolInput,
 } from "@earendil-works/pi-coding-agent";
 import { type Component, Container, Markdown, Spacer, truncateToWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import type { SubagentSnapshot, ToolCallTrailEntry } from "./events.ts";
@@ -87,43 +94,39 @@ export function tildify(p: string, home: string): string {
 
 function formatToolCall(name: string, args: Record<string, unknown>, theme: MinimalTheme, home: string): string {
 	switch (name) {
-		case "bash":
-			return theme.fg("muted", "$ ") + theme.fg("toolOutput", (args.command as string) || "...");
-		case "read": {
-			return (
-				theme.fg("muted", "read ") +
-				theme.fg("accent", tildify((args.file_path || args.path || "...") as string, home))
-			);
+		case "bash": {
+			const input = args as Partial<BashToolInput>;
+			return theme.fg("muted", "$ ") + theme.fg("toolOutput", input.command || "...");
 		}
-		case "write": {
-			return (
-				theme.fg("muted", "write ") +
-				theme.fg("accent", tildify((args.file_path || args.path || "...") as string, home))
-			);
+		case "read":
+		case "write":
+		case "edit": {
+			const input = args as Partial<ReadToolInput | WriteToolInput | EditToolInput>;
+			return theme.fg("muted", `${name} `) + theme.fg("accent", tildify(input.path || "...", home));
 		}
-		case "edit":
-			return (
-				theme.fg("muted", "edit ") +
-				theme.fg("accent", tildify((args.file_path || args.path || "...") as string, home))
-			);
-		case "ls":
-			return (
-				theme.fg("muted", "ls ") + theme.fg("accent", tildify((args.file_path || args.path || ".") as string, home))
-			);
-		case "find":
+		case "ls": {
+			const input = args as Partial<LsToolInput>;
+			return theme.fg("muted", "ls ") + theme.fg("accent", tildify(input.path || ".", home));
+		}
+		case "find": {
+			const input = args as Partial<FindToolInput>;
 			return (
 				theme.fg("muted", "find ") +
-				theme.fg("accent", (args.pattern as string) || "*") +
-				theme.fg("dim", ` in ${tildify((args.file_path || args.path || ".") as string, home)}`)
+				theme.fg("accent", input.pattern || "*") +
+				theme.fg("dim", ` in ${tildify(input.path || ".", home)}`)
 			);
-		case "grep":
+		}
+		case "grep": {
+			const input = args as Partial<GrepToolInput>;
 			return (
 				theme.fg("muted", "grep ") +
-				theme.fg("accent", `/${(args.pattern as string) || ""}/`) +
-				theme.fg("dim", ` in ${tildify((args.file_path || args.path || ".") as string, home)}`)
+				theme.fg("accent", `/${input.pattern || ""}/`) +
+				theme.fg("dim", ` in ${tildify(input.path || ".", home)}`)
 			);
+		}
 		case "subagent": {
-			return theme.fg("muted", "subagent ") + theme.fg("accent", (args.description as string) || "...");
+			const input = args as Partial<Params>;
+			return theme.fg("muted", "subagent ") + theme.fg("accent", input.description || "...");
 		}
 		default:
 			return theme.fg("accent", name) + theme.fg("dim", ` ${JSON.stringify(args)}`);
